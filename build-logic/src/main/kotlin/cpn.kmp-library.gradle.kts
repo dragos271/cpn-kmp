@@ -6,6 +6,9 @@ plugins {
     id("org.jlleitschuh.gradle.ktlint")
 }
 
+// Precompiled script plugins cannot use the type-safe `libs` accessor.
+val libs = the<VersionCatalogsExtension>().named("libs")
+
 kotlin {
     explicitApi()
 
@@ -27,6 +30,8 @@ kotlin {
     sourceSets {
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation(libs.findLibrary("kotest-property").get())
+            implementation(libs.findLibrary("kotlinx-coroutines-test").get())
         }
     }
 }
