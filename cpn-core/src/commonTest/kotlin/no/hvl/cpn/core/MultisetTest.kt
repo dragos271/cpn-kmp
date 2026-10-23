@@ -8,7 +8,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class MultisetTest {
-    private val ab2 = Multiset.of("a") + Multiset.of("b", 2)
+    private val ab2 = Multiset.of("a") + Multiset.repeated("b", 2)
 
     @Test
     fun emptyMultiset() {
@@ -16,7 +16,7 @@ class MultisetTest {
         assertTrue(empty.isEmpty())
         assertEquals(0, empty.size)
         assertEquals("empty", empty.toString())
-        assertEquals(empty, Multiset.of("x", 0))
+        assertEquals(empty, Multiset.repeated("x", 0))
         assertEquals(empty, Multiset.fromCounts(mapOf("x" to 0)))
     }
 
@@ -35,11 +35,12 @@ class MultisetTest {
     fun varargOfAddsRepeats() {
         assertEquals(ab2, Multiset.of("b", "a", "b"))
         assertEquals(ab2, listOf("b", "b", "a").toMultiset())
+        assertEquals(2, Multiset.of(1, 7).size)
     }
 
     @Test
     fun equalityIgnoresInsertionOrder() {
-        val ba2 = Multiset.of("b", 2) + Multiset.of("a")
+        val ba2 = Multiset.repeated("b", 2) + Multiset.of("a")
         assertEquals(ab2, ba2)
         assertEquals(ab2.hashCode(), ba2.hashCode())
         assertNotEquals(ab2, Multiset.of("a", "b"))
@@ -54,13 +55,13 @@ class MultisetTest {
 
     @Test
     fun subtractionOfNonSubMultisetFails() {
-        assertFailsWith<IllegalArgumentException> { ab2 - Multiset.of("a", 2) }
+        assertFailsWith<IllegalArgumentException> { ab2 - Multiset.repeated("a", 2) }
         assertFailsWith<IllegalArgumentException> { ab2 - Multiset.of("c") }
     }
 
     @Test
     fun scalarMultiplication() {
-        assertEquals(Multiset.of("a", 3) + Multiset.of("b", 6), 3 * ab2)
+        assertEquals(Multiset.repeated("a", 3) + Multiset.repeated("b", 6), 3 * ab2)
         assertEquals(ab2 * 3, 3 * ab2)
         assertEquals(Multiset.empty(), ab2 * 0)
         assertFailsWith<IllegalArgumentException> { ab2 * -1 }
@@ -68,10 +69,10 @@ class MultisetTest {
 
     @Test
     fun subsetOf() {
-        assertTrue(Multiset.of("b", 2) subsetOf ab2)
+        assertTrue(Multiset.repeated("b", 2) subsetOf ab2)
         assertTrue(Multiset.empty<String>() subsetOf ab2)
-        assertFalse(Multiset.of("b", 3) subsetOf ab2)
-        assertFalse(ab2 subsetOf Multiset.of("b", 2))
+        assertFalse(Multiset.repeated("b", 3) subsetOf ab2)
+        assertFalse(ab2 subsetOf Multiset.repeated("b", 2))
     }
 
     @Test
@@ -87,7 +88,7 @@ class MultisetTest {
 
     @Test
     fun filterKeepsMultiplicity() {
-        assertEquals(Multiset.of("b", 2), ab2.filter { it == "b" })
+        assertEquals(Multiset.repeated("b", 2), ab2.filter { it == "b" })
     }
 
     @Test
@@ -99,7 +100,7 @@ class MultisetTest {
 
     @Test
     fun countOverflowIsDetected() {
-        val big = Multiset.of("a", Int.MAX_VALUE)
+        val big = Multiset.repeated("a", Int.MAX_VALUE)
         assertFailsWith<IllegalStateException> { big + Multiset.of("a") }
         assertFailsWith<IllegalStateException> { big * 2 }
     }

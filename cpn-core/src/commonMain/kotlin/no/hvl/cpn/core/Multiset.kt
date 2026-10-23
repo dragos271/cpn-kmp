@@ -8,7 +8,7 @@ package no.hvl.cpn.core
  * | CPN ML          | Kotlin                     |
  * |-----------------|----------------------------|
  * | `empty`         | [Multiset.empty]           |
- * | `` n`x ``       | [Multiset.of] `(x, n)`     |
+ * | `` n`x ``       | [Multiset.repeated] `(x, n)` |
  * | `a ++ b`        | `a + b`                    |
  * | `a -- b`        | `a - b`                    |
  * | `n ** a`        | `n * a`                    |
@@ -50,7 +50,7 @@ public class Multiset<T> private constructor(
         return Multiset(result)
     }
 
-    public operator fun plus(element: T): Multiset<T> = this + of(element)
+    public operator fun plus(element: T): Multiset<T> = this + repeated(element, 1)
 
     /**
      * CPN ML `--`. Like CPN Tools, this fails unless [other] is a sub-multiset of this one.
@@ -129,9 +129,9 @@ public class Multiset<T> private constructor(
         public fun <T> empty(): Multiset<T> = EMPTY as Multiset<T>
 
         /** CPN ML `` count`element ``. */
-        public fun <T> of(
+        public fun <T> repeated(
             element: T,
-            count: Int = 1,
+            count: Int,
         ): Multiset<T> {
             require(count >= 0) { "Count must be non-negative, was $count" }
             return if (count == 0) empty() else Multiset(linkedMapOf(element to count))
