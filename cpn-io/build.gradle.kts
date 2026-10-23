@@ -8,6 +8,11 @@ kotlin {
         commonMain.dependencies {
             api(project(":cpn-core"))
             api(project(":cpn-lang"))
+            implementation(libs.kotlinx.serialization.json)
+        }
+        commonTest.dependencies {
+            // Loaded models are checked by simulating them.
+            implementation(project(":cpn-sim"))
         }
     }
 }

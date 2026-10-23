@@ -8,6 +8,8 @@ kotlin {
         commonMain.dependencies {
             implementation(project(":cpn-api"))
             implementation(libs.clikt)
+            implementation(libs.kotlinx.serialization.json)
+            implementation(libs.kotlinx.io.core)
         }
     }
 }

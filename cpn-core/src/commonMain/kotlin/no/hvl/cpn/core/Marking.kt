@@ -46,9 +46,10 @@ public class Marking private constructor(
      * Defaults to the marked places only.
      */
     public fun format(places: List<Place<*>> = tokens.keys.toList()): String =
-        places.joinToString("\n") { place -> "${place.name}: ${formatTokens(place)}" }
+        places.joinToString("\n") { place -> "${place.name}: ${tokensOf(place)}" }
 
-    private fun <T> formatTokens(place: Place<T>): String = this[place].format(place.colourSet.order, place.colourSet::format)
+    /** The tokens on [place] in CPN Tools notation and colour-set order, e.g. ``1`1++2`3`` or `empty`. */
+    public fun <T> tokensOf(place: Place<T>): String = this[place].format(place.colourSet.order, place.colourSet::format)
 
     override fun toString(): String = format()
 

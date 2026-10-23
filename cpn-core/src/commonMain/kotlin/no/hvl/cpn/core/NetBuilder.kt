@@ -45,7 +45,10 @@ public class NetBuilder internal constructor(
     public fun <T> variable(
         name: String,
         colourSet: ColourSet<T>,
-    ): Variable<T> = Variable(name, colourSet).also { variables += it }
+    ): Variable<T> = declare(Variable(name, colourSet))
+
+    /** Declares a variable created elsewhere, e.g. by a model reader that builds inscriptions first. */
+    public fun <T> declare(variable: Variable<T>): Variable<T> = variable.also { variables += it }
 
     /** Adds a page. Define subpages before the pages whose substitution transitions use them. */
     public fun page(

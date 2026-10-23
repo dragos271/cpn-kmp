@@ -1,0 +1,92 @@
+{
+  "name": "SimpleProtocol",
+  "colsets": [
+    { "name": "NO", "type": "int" },
+    { "name": "DATA", "type": "string" },
+    { "name": "NOxDATA", "type": "product", "of": ["NO", "DATA"] }
+  ],
+  "variables": { "n": "NO", "k": "NO", "d": "DATA", "data": "DATA", "success": "BOOL" },
+  "pages": [
+    {
+      "name": "Protocol",
+      "places": [
+        {
+          "name": "PacketsToSend", "colset": "NOxDATA",
+          "init": [[1, "COL"], [2, "OUR"], [3, "ED "], [4, "PET"], [5, "RI "], [6, "NET"]]
+        },
+        { "name": "A", "colset": "NOxDATA" },
+        { "name": "B", "colset": "NOxDATA" },
+        { "name": "C", "colset": "NO" },
+        { "name": "D", "colset": "NO" },
+        { "name": "NextSend", "colset": "NO", "init": [1] },
+        { "name": "NextRec", "colset": "NO", "init": [1] },
+        { "name": "DataReceived", "colset": "DATA", "init": [""] }
+      ],
+      "transitions": [
+        {
+          "name": "SendPacket",
+          "both": [
+            { "place": "PacketsToSend", "inscription": { "pattern": ["n", "d"] } },
+            { "place": "NextSend", "inscription": "n" }
+          ],
+          "out": [{ "place": "A", "inscription": { "pattern": ["n", "d"] } }]
+        },
+        {
+          "name": "TransmitPacket",
+          "in": [{ "place": "A", "inscription": { "pattern": ["n", "d"] } }],
+          "out": [{
+            "place": "B",
+            "inscription": { "if": { "var": "success" }, "then": { "pattern": ["n", "d"] }, "else": { "tokens": [] } }
+          }]
+        },
+        {
+          "name": "ReceivePacket",
+          "in": [
+            { "place": "B", "inscription": { "pattern": ["n", "d"] } },
+            { "place": "NextRec", "inscription": "k" },
+            { "place": "DataReceived", "inscription": "data" }
+          ],
+          "out": [
+            {
+              "place": "NextRec",
+              "inscription": { "expr": {
+                "if": { "op": "=", "args": [{ "var": "n" }, { "var": "k" }] },
+                "then": { "op": "+", "args": [{ "var": "k" }, 1] },
+                "else": { "var": "k" }
+              } }
+            },
+            {
+              "place": "DataReceived",
+              "inscription": { "expr": {
+                "if": { "op": "=", "args": [{ "var": "n" }, { "var": "k" }] },
+                "then": { "op": "^", "args": [{ "var": "data" }, { "var": "d" }] },
+                "else": { "var": "data" }
+              } }
+            },
+            {
+              "place": "C",
+              "inscription": { "expr": {
+                "if": { "op": "=", "args": [{ "var": "n" }, { "var": "k" }] },
+                "then": { "op": "+", "args": [{ "var": "k" }, 1] },
+                "else": { "var": "k" }
+              } }
+            }
+          ]
+        },
+        {
+          "name": "TransmitAck",
+          "in": [{ "place": "C", "inscription": "n" }],
+          "out": [{ "place": "D", "inscription": { "if": { "var": "success" }, "then": "n", "else": { "tokens": [] } } }]
+        },
+        {
+          "name": "ReceiveAck",
+          "in": [
+            { "place": "D", "inscription": "n" },
+            { "place": "NextSend", "inscription": "k" }
+          ],
+          "out": [{ "place": "NextSend", "inscription": "n" }]
+        }
+      ]
+    }
+  ]
+}
