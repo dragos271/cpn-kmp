@@ -186,6 +186,12 @@ public class PageBuilder internal constructor(
             vararg variables: Variable<*>,
             body: (Binding) -> Multiset<T>,
         ): Unit = output(place, ArcInscription.Function(variables.toSet(), body = body))
+
+        public fun <T> both(
+            place: Place<T>,
+            vararg variables: Variable<*>,
+            body: (Binding) -> Multiset<T>,
+        ): Unit = both(place, ArcInscription.Function(variables.toSet(), body = body))
     }
 }
 

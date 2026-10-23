@@ -58,6 +58,41 @@ public object ColourSets {
         values: List<T>,
         format: (T) -> String = { it.toString() },
     ): ColourSet<T> = FiniteColourSet(name, values, format)
+
+    /**
+     * CPN ML `colset NAME = product A * B`, with colours as [Pair]s. General n-ary products and
+     * records come with the CPN ML colour sets in `cpn-lang` (T2.3).
+     */
+    public fun <A, B> product(
+        name: String,
+        first: ColourSet<A>,
+        second: ColourSet<B>,
+    ): ColourSet<Pair<A, B>> = ProductColourSet(name, first, second)
+}
+
+private class ProductColourSet<A, B>(
+    override val name: String,
+    private val first: ColourSet<A>,
+    private val second: ColourSet<B>,
+) : ColourSet<Pair<A, B>> {
+    override fun contains(value: Any?): Boolean = value is Pair<*, *> && value.first in first && value.second in second
+
+    override val values: List<Pair<A, B>>? by lazy {
+        val firsts = first.values
+        val seconds = second.values
+        if (firsts == null || seconds == null) null else firsts.flatMap { a -> seconds.map { b -> a to b } }
+    }
+
+    override val order: Comparator<in Pair<A, B>>? =
+        if (first.order == null || second.order == null) {
+            null
+        } else {
+            compareBy<Pair<A, B>, A>(first.order!!) { it.first }.thenBy(second.order!!) { it.second }
+        }
+
+    override fun format(value: Pair<A, B>): String = "(${first.format(value.first)},${second.format(value.second)})"
+
+    override fun toString(): String = name
 }
 
 private class FiniteColourSet<T>(
