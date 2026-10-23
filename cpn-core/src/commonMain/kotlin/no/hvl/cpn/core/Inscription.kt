@@ -60,9 +60,9 @@ private fun formatColour(
 /**
  * An arc inscription: evaluates to the multiset of tokens an arc moves under a binding.
  *
- * The built-in kinds ([Constant], [VariableTerm], [Function]) cover nets written in Kotlin. `cpn-lang`
- * adds its own implementation for parsed CPN ML expressions. [Constant] and [VariableTerm] are
- * visible to the binding search (T1.6), which can bind variables directly from them.
+ * The built-in kinds ([Constant], [VariableTerm], [PairPattern], [Function]) cover nets written in
+ * Kotlin. `cpn-lang` adds its own implementation for parsed CPN ML expressions. Inscriptions that are
+ * also a [PatternInscription] let the binding search bind variables from the tokens on input places.
  */
 public interface ArcInscription<T> {
     /** Free variables of the inscription. */
@@ -84,8 +84,8 @@ public interface ArcInscription<T> {
     /** ``count`variable``; with `count = 1` this is just the variable, as CPN ML allows. */
     public class VariableTerm<T>(
         public val variable: Variable<T>,
-        public val count: Int = 1,
-    ) : ArcInscription<T> {
+        override val count: Int = 1,
+    ) : PatternInscription<T> {
         init {
             require(count > 0) { "Count must be positive, was $count" }
         }
@@ -94,7 +94,34 @@ public interface ArcInscription<T> {
 
         override fun evaluate(binding: Binding): Multiset<T> = Multiset.repeated(binding[variable], count)
 
+        override fun match(
+            token: T,
+            binding: Binding,
+        ): Binding? = binding.matching(variable, token)
+
         override fun toString(): String = if (count == 1) variable.name else "$count`${variable.name}"
+    }
+
+    /** ``count`(first,second)`` over tokens of a [ColourSets.product]. */
+    public class PairPattern<A, B>(
+        public val first: Variable<A>,
+        public val second: Variable<B>,
+        override val count: Int = 1,
+    ) : PatternInscription<Pair<A, B>> {
+        init {
+            require(count > 0) { "Count must be positive, was $count" }
+        }
+
+        override val variables: Set<Variable<*>> = setOf(first, second)
+
+        override fun evaluate(binding: Binding): Multiset<Pair<A, B>> = Multiset.repeated(binding[first] to binding[second], count)
+
+        override fun match(
+            token: Pair<A, B>,
+            binding: Binding,
+        ): Binding? = binding.matching(first, token.first)?.matching(second, token.second)
+
+        override fun toString(): String = (if (count == 1) "" else "$count`") + "(${first.name},${second.name})"
     }
 
     /** Arbitrary Kotlin code over the listed [variables]; [source] is used for display only. */
@@ -108,6 +135,33 @@ public interface ArcInscription<T> {
         override fun toString(): String = source
     }
 }
+
+/**
+ * An arc inscription that is a pattern: it always evaluates to [count] copies of one token, and given
+ * a token it can find the variable values that produce it. The binding search uses this to bind
+ * variables from input places instead of enumerating their colour sets.
+ */
+public interface PatternInscription<T> : ArcInscription<T> {
+    /** How many copies of the matched token the pattern denotes. */
+    public val count: Int
+
+    /** Extends [binding] so that this pattern evaluates to `count` copies of [token], or returns null if impossible. */
+    public fun match(
+        token: T,
+        binding: Binding,
+    ): Binding?
+}
+
+/** Binds [variable] to [value], or checks an existing value; null if they conflict or [value] is outside its colour set. */
+public fun <T> Binding.matching(
+    variable: Variable<T>,
+    value: T,
+): Binding? =
+    when {
+        isBound(variable) -> if (this[variable] == value) this else null
+        value !in variable.colourSet -> null
+        else -> with(variable, value)
+    }
 
 /** A transition guard: a boolean condition over a binding. */
 public interface Guard {

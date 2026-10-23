@@ -55,6 +55,9 @@ public class Semantics(
     /** Var(t): the variables of the guard and of the arcs around [transition]. */
     public fun variablesOf(transition: Transition): Set<Variable<*>> = variablesByTransition.getValue(transition)
 
+    /** Arcs that consume tokens for [transition], including double arcs. */
+    public fun inputArcs(transition: Transition): List<Arc<*>> = arcsByTransition.getValue(transition).filter { it.direction.isInput }
+
     /** True if [element] is enabled in [marking]. */
     public fun isEnabled(
         element: BindingElement,

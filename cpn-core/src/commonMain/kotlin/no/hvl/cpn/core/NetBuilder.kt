@@ -174,6 +174,13 @@ public class PageBuilder internal constructor(
             tokens: Multiset<T>,
         ): Unit = output(place, ArcInscription.Constant(tokens))
 
+        /** The pattern ``count`(first,second)``, e.g. `input(packets, tuple(n, d))`. */
+        public fun <A, B> tuple(
+            first: Variable<A>,
+            second: Variable<B>,
+            count: Int = 1,
+        ): ArcInscription<Pair<A, B>> = ArcInscription.PairPattern(first, second, count)
+
         /** Arc inscription written as Kotlin code; list every variable [body] reads. */
         public fun <T> input(
             place: Place<T>,

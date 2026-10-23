@@ -64,18 +64,18 @@ class SimpleProtocol {
 
                 sendPacket =
                     transition("SendPacket") {
-                        both(packetsToSend, n, d) { pair(it[n], it[d]) }
+                        both(packetsToSend, tuple(n, d))
                         both(nextSend, n)
-                        output(a, n, d) { pair(it[n], it[d]) }
+                        output(a, tuple(n, d))
                     }
                 transmitPacket =
                     transition("TransmitPacket") {
-                        input(a, n, d) { pair(it[n], it[d]) }
+                        input(a, tuple(n, d))
                         output(b, n, d, success) { if (it[success]) pair(it[n], it[d]) else Multiset.empty() }
                     }
                 receivePacket =
                     transition("ReceivePacket") {
-                        input(b, n, d) { pair(it[n], it[d]) }
+                        input(b, tuple(n, d))
                         input(nextRec, k)
                         output(nextRec, n, k) { Multiset.of(if (it[n] == it[k]) it[k] + 1 else it[k]) }
                         input(dataReceived, data)

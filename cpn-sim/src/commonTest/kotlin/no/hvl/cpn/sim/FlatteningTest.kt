@@ -1,6 +1,5 @@
 package no.hvl.cpn.sim
 
-import no.hvl.cpn.core.Binding
 import no.hvl.cpn.core.ColourSets
 import no.hvl.cpn.core.Guard
 import no.hvl.cpn.core.InvalidNetException
@@ -11,7 +10,6 @@ import no.hvl.cpn.core.Place
 import no.hvl.cpn.core.PortType
 import no.hvl.cpn.core.Substitution
 import no.hvl.cpn.core.Transition
-import no.hvl.cpn.core.Variable
 import no.hvl.cpn.core.flatten
 import no.hvl.cpn.core.net
 import kotlin.test.Test
@@ -20,71 +18,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class FlatteningTest {
-    private val no = ColourSets.intRange("NO", 1..3)
-
-    /**
-     * Top ── Sender ──▶ A ── Channel ──▶ C ── Receiver
-     *                        Channel = In ─ Transmit ─▶ Mid ─ Transmit ─▶ Out   (two instances of Transmit)
-     * Receiver's Received is fused with Top's Delivered.
-     */
-    private fun hierarchical(): Net =
-        net("Hierarchical") {
-            val n = variable("n", no)
-            val success = variable("success", ColourSets.BOOL)
-            val sender =
-                page("Sender") {
-                    val out = port("Out", no, PortType.OUT)
-                    val next = place("Next", no, Multiset.of(1))
-                    transition("Send", Guard.of(n) { it[n] <= 2 }) {
-                        input(next, n)
-                        output(next, n) { Multiset.of(it[n] + 1) }
-                        output(out, n)
-                    }
-                }
-            val transmit =
-                page("Transmit") {
-                    val input = port("In", no, PortType.IN)
-                    val output = port("Out", no, PortType.OUT)
-                    transition("Transmit") {
-                        input(input, n)
-                        output(output, n, success) { if (it[success]) Multiset.of(it[n]) else Multiset.empty() }
-                    }
-                }
-            val channel =
-                page("Channel") {
-                    val input = port("In", no, PortType.IN)
-                    val output = port("Out", no, PortType.OUT)
-                    val mid = place("Mid", no)
-                    substitution("Hop1", transmit) {
-                        assign(input, transmit.place("In", no))
-                        assign(mid, transmit.place("Out", no))
-                    }
-                    substitution("Hop2", transmit) {
-                        assign(mid, transmit.place("In", no))
-                        assign(output, transmit.place("Out", no))
-                    }
-                }
-            val receiver =
-                page("Receiver") {
-                    val input = port("In", no, PortType.IN)
-                    val received = place("Received", no, fusionSet = "Log")
-                    transition("Receive") {
-                        input(input, n)
-                        output(received, n)
-                    }
-                }
-            page("Top") {
-                val a = place("A", no)
-                val c = place("C", no)
-                place("Delivered", no, fusionSet = "Log")
-                substitution("Sender", sender) { assign(a, sender.place("Out", no)) }
-                substitution("Channel", channel) {
-                    assign(a, channel.place("In", no))
-                    assign(c, channel.place("Out", no))
-                }
-                substitution("Receiver", receiver) { assign(c, receiver.place("In", no)) }
-            }
-        }
+    private val no = Examples.no
 
     /** The same net flattened by hand, using the names flattening should produce. */
     private fun handFlattened(): Net =
@@ -208,32 +142,17 @@ class FlatteningTest {
         assertTrue(error.problems.any { "port 'In' of page 'Sub' is not assigned" in it }, error.problems.toString())
     }
 
-    /** Every reachable marking, as place name → CPN Tools text, by brute-force binding enumeration. */
-    private fun reachableMarkings(net: Net): Set<Map<String, String>> {
-        val semantics = Semantics(net)
-        val places = net.pages.flatMap { it.places }
-        val bindings = semantics.transitions.associateWith { allBindings(semantics.variablesOf(it).toList()) }
-        val seen = mutableSetOf(semantics.initialMarking)
-        val queue = ArrayDeque(seen)
-        while (queue.isNotEmpty()) {
-            val marking = queue.removeFirst()
-            for ((transition, candidates) in bindings) {
-                for (binding in candidates) {
-                    val element = BindingElement(transition, binding)
-                    if (semantics.isEnabled(element, marking)) {
-                        val next = semantics.fire(element, marking)
-                        if (seen.add(next)) queue += next
-                    }
-                }
-            }
-        }
-        return seen.map { m -> places.associate { it.name to m.format(listOf(it)).substringAfter(": ") } }.toSet()
-    }
+    private fun hierarchical(): Net = Examples.hierarchical()
 
-    private fun allBindings(variables: List<Variable<*>>): List<Binding> =
-        variables.fold(listOf(Binding.EMPTY)) { partial, variable ->
-            @Suppress("UNCHECKED_CAST")
-            val v = variable as Variable<Any?>
-            partial.flatMap { b -> v.colourSet.values!!.map { b.with(v, it) } }
-        }
+    private fun reachableMarkings(net: Net): Set<Map<String, String>> {
+        val places = net.pages.flatMap { it.places }
+        return Examples
+            .reachableByBruteForce(Semantics(net))
+            .map { m ->
+                places.associate {
+                    it.name to
+                        m.format(listOf(it)).substringAfter(": ")
+                }
+            }.toSet()
+    }
 }
