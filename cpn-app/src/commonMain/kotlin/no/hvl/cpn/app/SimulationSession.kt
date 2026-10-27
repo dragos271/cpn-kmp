@@ -55,7 +55,9 @@ class SimulationSession(
     var seed: Long = seed
         private set
 
-    private var simulator = Simulator(model.net, seed)
+    private val net = requireNotNull(model.net) { "Only models with a runnable net can be simulated" }
+
+    private var simulator = Simulator(net, seed)
 
     var revision: Int = 0
         private set
@@ -67,7 +69,7 @@ class SimulationSession(
 
     /** The page instance shown for a document page (whose id is the net page's name). */
     private fun instanceOf(pageId: String): PageInstance? =
-        model.net.pages
+        net.pages
             .firstOrNull { it.name == pageId }
             ?.let { flat.instancesOf(it).firstOrNull() }
 
@@ -124,7 +126,7 @@ class SimulationSession(
     fun reset(newSeed: Long = seed) {
         if (newSeed != seed) {
             seed = newSeed
-            simulator = Simulator(model.net, newSeed)
+            simulator = Simulator(net, newSeed)
         } else {
             simulator.reset()
         }

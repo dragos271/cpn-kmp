@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,14 +75,19 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import no.hvl.cpn.app.canvas.CanvasColors
 import no.hvl.cpn.app.canvas.CanvasMode
 import no.hvl.cpn.app.canvas.NetCanvas
 import no.hvl.cpn.app.canvas.Tool
 import no.hvl.cpn.app.canvas.Viewport
 import no.hvl.cpn.app.canvas.snap
+import no.hvl.cpn.app.files.modelFileAccess
+import no.hvl.cpn.app.files.suggestedFileName
 import no.hvl.cpn.core.ArcDirection
 import no.hvl.cpn.io.LoadedModel
+import no.hvl.cpn.io.ModelFiles
+import no.hvl.cpn.io.SavedFormat
 import no.hvl.cpn.io.model.ConnectResult
 import no.hvl.cpn.io.model.CpnDocument
 import no.hvl.cpn.io.model.PageDocument
@@ -103,7 +111,12 @@ import no.hvl.cpn.sim.StopReason
  * a properties panel on the right, and page tabs plus simulation controls at the bottom.
  */
 @Composable
-fun EditorScreen(model: LoadedModel) {
+fun EditorScreen(
+    model: LoadedModel,
+    /** Where the model was opened from (a path on desktop), or null if it has not been saved yet. */
+    location: String?,
+    onOpen: (LoadedModel, String?) -> Unit,
+) {
     val history = remember(model) { EditHistory(model.document) }
     val document = history.current
     var pageId by remember(model) {
@@ -114,7 +127,8 @@ fun EditorScreen(model: LoadedModel) {
         )
     }
     var selection by remember { mutableStateOf<String?>(null) }
-    var mode by remember { mutableStateOf(CanvasMode.SIMULATE) }
+    // Runnable models open ready to simulate; models that cannot run yet open for editing.
+    var mode by remember(model) { mutableStateOf(if (model.net != null) CanvasMode.SIMULATE else CanvasMode.EDIT) }
     var tool by remember { mutableStateOf<Tool?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     val viewports = remember(model) { mutableStateMapOf<String, Viewport>() }
@@ -125,12 +139,61 @@ fun EditorScreen(model: LoadedModel) {
     val problemIds = remember(problems) { problems.mapNotNull { it.elementId }.toSet() }
     val edited = remember(document) { document.structure() != model.document.structure() }
 
-    val session = remember(model) { SimulationSession(model, seed = 2026) }
-    var snapshot by remember(session) { mutableStateOf(session.snapshot()) }
+    // Models without a runnable net (new ones, documents with structural edits) cannot be simulated yet.
+    val session = remember(model) { model.net?.let { SimulationSession(model, seed = 2026) } }
+    var snapshot by remember(session) { mutableStateOf(session?.snapshot()) }
 
     fun act(action: () -> Unit) {
         action()
-        snapshot = session.snapshot()
+        snapshot = session?.snapshot()
+    }
+
+    // Saving: what was last saved, where, and a short notice about it.
+    val files = remember { modelFileAccess() }
+    val scope = rememberCoroutineScope()
+    var savedDocument by remember(model) { mutableStateOf(model.document) }
+    var savedTo by remember(model) { mutableStateOf(location) }
+    var notice by remember(model) { mutableStateOf<String?>(null) }
+    var confirmDiscard by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val unsaved = document != savedDocument
+
+    fun save(asNewFile: Boolean) {
+        scope.launch {
+            val current = history.current
+            val saved = ModelFiles.save(model, current)
+            val target = if (asNewFile || !files.canSaveInPlace) null else savedTo
+            val where =
+                try {
+                    files.save(saved.text, suggestedFileName(current.name), target)
+                } catch (e: Exception) {
+                    message = "Couldn't save: ${e.message}"
+                    return@launch
+                } ?: return@launch
+            savedTo = where
+            savedDocument = current
+            message = null
+            notice =
+                when (saved.format) {
+                    SavedFormat.RUNNABLE_MODEL -> "Saved to $where"
+                    SavedFormat.DOCUMENT -> "Saved to $where as an editable document. It runs once the evaluator exists (T2.5)."
+                }
+        }
+    }
+
+    /** Runs [action] now, or after the user agrees to drop unsaved changes. */
+    fun discardingChanges(action: () -> Unit) {
+        if (history.current == savedDocument) action() else confirmDiscard = action
+    }
+
+    fun open() {
+        scope.launch {
+            val file = files.open() ?: return@launch
+            try {
+                onOpen(ModelFiles.open(file.text), file.name)
+            } catch (e: Exception) {
+                message = "Couldn't open ${file.name}: ${e.message}"
+            }
+        }
     }
 
     // An edit gesture ends when the selection changes, so the next edit is its own undo step.
@@ -187,7 +250,7 @@ fun EditorScreen(model: LoadedModel) {
     fun keepSelectionIfItExists() {
         val id = selection ?: return
         if (history.current
-                .page(page.id)
+                .page(currentPageId())
                 ?.ids()
                 ?.contains(id) != true
         ) {
@@ -230,6 +293,8 @@ fun EditorScreen(model: LoadedModel) {
         if (event.type != KeyEventType.KeyDown) return false
         val command = event.isMetaPressed || event.isCtrlPressed
         return when {
+            command && event.key == Key.S -> true.also { save(asNewFile = event.isShiftPressed) }
+            command && event.key == Key.O -> true.also { discardingChanges(::open) }
             command && event.key == Key.Z && event.isShiftPressed -> true.also { redo() }
             command && event.key == Key.Z -> true.also { undo() }
             command && event.key == Key.Y -> true.also { redo() }
@@ -250,6 +315,12 @@ fun EditorScreen(model: LoadedModel) {
         Column(Modifier.fillMaxSize()) {
             TopBar(
                 document = document,
+                unsaved = unsaved,
+                canSaveAs = files.canSaveInPlace,
+                onNew = { discardingChanges { onOpen(ModelFiles.newModel(), null) } },
+                onOpen = { discardingChanges(::open) },
+                onSave = { save(asNewFile = false) },
+                onSaveAs = { save(asNewFile = true) },
                 mode = mode,
                 viewport = viewport,
                 canUndo = history.canUndo,
@@ -317,7 +388,7 @@ fun EditorScreen(model: LoadedModel) {
                         mode = mode,
                         tool = tool,
                         selection = selection,
-                        overlay = if (mode == CanvasMode.SIMULATE) snapshot.overlay(page.id) else null,
+                        overlay = if (mode == CanvasMode.SIMULATE) snapshot?.overlay(page.id) else null,
                         problems = if (mode == CanvasMode.EDIT) problemIds else emptySet(),
                         viewport = viewport,
                         colors = canvasColors(),
@@ -329,12 +400,28 @@ fun EditorScreen(model: LoadedModel) {
                             history.edit("move:$id") { doc -> doc.withPage(doc.page(currentPageId())!!.moved(id, position)) }
                         },
                         onMoveEnd = { history.breakCoalescing() },
-                        onFire = { id -> act { session.fireTransition(currentPageId(), id) } },
+                        onFire = { id -> act { session?.fireTransition(currentPageId(), id) } },
                         onPlace = ::add,
                         onConnect = ::connect,
                         modifier = Modifier.fillMaxSize(),
                     )
-                    if (mode == CanvasMode.SIMULATE && edited) EditedNotice(Modifier.align(Alignment.TopCenter).padding(10.dp))
+                    if (mode == CanvasMode.SIMULATE) {
+                        when {
+                            session == null ->
+                                Notice(
+                                    "This model can't run yet: models written as editable documents run once the CPN ML evaluator exists (T2.5).",
+                                    Modifier.align(Alignment.TopCenter).padding(10.dp),
+                                )
+                            edited ->
+                                Notice(
+                                    "You've edited the model. Simulation still runs the version you opened: running edited CPN ML needs the evaluator (T2.5).",
+                                    Modifier.align(Alignment.TopCenter).padding(10.dp),
+                                )
+                        }
+                    }
+                    (message ?: notice)?.let { text ->
+                        Toast(text, isError = message != null, Modifier.align(Alignment.BottomEnd).padding(10.dp))
+                    }
                     CanvasHint(mode, tool, Modifier.align(Alignment.BottomStart).padding(10.dp))
                 }
                 VerticalDivider()
@@ -364,7 +451,6 @@ fun EditorScreen(model: LoadedModel) {
                 session = session,
                 snapshot = snapshot,
                 problemCount = problems.size,
-                message = message,
                 onPage = {
                     pageId = it
                     selection = null
@@ -373,6 +459,20 @@ fun EditorScreen(model: LoadedModel) {
             )
         }
         paletteDrag?.let { (dragged, at) -> DragGhost(dragged, at) }
+        confirmDiscard?.let { action ->
+            AlertDialog(
+                onDismissRequest = { confirmDiscard = null },
+                title = { Text("Discard unsaved changes?") },
+                text = { Text("Your changes to ${document.name} haven't been saved.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmDiscard = null
+                        action()
+                    }) { Text("Discard") }
+                },
+                dismissButton = { TextButton(onClick = { confirmDiscard = null }) { Text("Cancel") } },
+            )
+        }
     }
 }
 
@@ -418,6 +518,12 @@ private fun canvasColors(): CanvasColors {
 @Composable
 private fun TopBar(
     document: CpnDocument,
+    unsaved: Boolean,
+    canSaveAs: Boolean,
+    onNew: () -> Unit,
+    onOpen: () -> Unit,
+    onSave: () -> Unit,
+    onSaveAs: () -> Unit,
     mode: CanvasMode,
     viewport: Viewport,
     canUndo: Boolean,
@@ -432,11 +538,64 @@ private fun TopBar(
     Row(
         Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainer).padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
+        // The commands scroll sideways in narrow windows; the mode switch stays visible on the right.
+        Row(
+            Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            ToolbarCommands(
+                document,
+                unsaved,
+                canSaveAs,
+                onNew,
+                onOpen,
+                onSave,
+                onSaveAs,
+                viewport,
+                canUndo,
+                canRedo,
+                canDelete,
+                onFit,
+                onUndo,
+                onRedo,
+                onDelete,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        ModeButton("Edit", mode == CanvasMode.EDIT) { onMode(CanvasMode.EDIT) }
+        ModeButton("Simulate", mode == CanvasMode.SIMULATE) { onMode(CanvasMode.SIMULATE) }
+    }
+}
+
+@Composable
+private fun ToolbarCommands(
+    document: CpnDocument,
+    unsaved: Boolean,
+    canSaveAs: Boolean,
+    onNew: () -> Unit,
+    onOpen: () -> Unit,
+    onSave: () -> Unit,
+    onSaveAs: () -> Unit,
+    viewport: Viewport,
+    canUndo: Boolean,
+    canRedo: Boolean,
+    canDelete: Boolean,
+    onFit: () -> Unit,
+    onUndo: () -> Unit,
+    onRedo: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    run {
         Text("CPN Tool", fontWeight = FontWeight.SemiBold)
-        Text(document.name, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.width(12.dp))
+        Text(document.name + if (unsaved) " •" else "", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.width(8.dp))
+        TextButton(onClick = onNew) { Text("New") }
+        TextButton(onClick = onOpen) { Text("Open…") }
+        TextButton(onClick = onSave) { Text("Save") }
+        if (canSaveAs) TextButton(onClick = onSaveAs) { Text("Save as…") }
+        Spacer(Modifier.width(8.dp))
         TextButton(onClick = onUndo, enabled = canUndo) { Text("Undo") }
         TextButton(onClick = onRedo, enabled = canRedo) { Text("Redo") }
         TextButton(onClick = onDelete, enabled = canDelete) { Text("Delete") }
@@ -445,9 +604,6 @@ private fun TopBar(
         Text("${(viewport.zoom * 100).toInt()}%", style = MaterialTheme.typography.labelLarge)
         TextButton(onClick = { viewport.zoomAt(1.2f) }) { Text("+") }
         TextButton(onClick = onFit) { Text("Fit") }
-        Spacer(Modifier.weight(1f))
-        ModeButton("Edit", mode == CanvasMode.EDIT) { onMode(CanvasMode.EDIT) }
-        ModeButton("Simulate", mode == CanvasMode.SIMULATE) { onMode(CanvasMode.SIMULATE) }
     }
 }
 
@@ -598,9 +754,32 @@ private fun CanvasHint(
 }
 
 @Composable
-private fun EditedNotice(modifier: Modifier) {
+private fun Toast(
+    text: String,
+    isError: Boolean,
+    modifier: Modifier,
+) {
     Text(
-        "You've edited the model. Simulation still runs the version you opened: running edited CPN ML needs the evaluator (T2.5).",
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        color = if (isError) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+        modifier =
+            modifier
+                .width(420.dp)
+                .background(
+                    if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
+                    RoundedCornerShape(8.dp),
+                ).padding(horizontal = 12.dp, vertical = 8.dp),
+    )
+}
+
+@Composable
+private fun Notice(
+    text: String,
+    modifier: Modifier,
+) {
+    Text(
+        text,
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onTertiaryContainer,
         modifier =
@@ -618,8 +797,8 @@ private fun PropertiesPanel(
     selection: String?,
     mode: CanvasMode,
     problems: List<Problem>,
-    snapshot: SessionSnapshot,
-    session: SimulationSession,
+    snapshot: SessionSnapshot?,
+    session: SimulationSession?,
     act: (() -> Unit) -> Unit,
     edit: (String?, (CpnDocument) -> CpnDocument) -> Unit,
     onDelete: () -> Unit,
@@ -660,7 +839,7 @@ private fun PropertiesPanel(
                     placeholder = "empty",
                 ) { v -> edit("marking:${place.id}") { it.updatePlace(page.id, place.id) { p -> p.copy(initialMarking = v) } } }
                 if (!editing) {
-                    val tokens = snapshot.overlay(page.id).tokens[place.id]
+                    val tokens = snapshot?.overlay(page.id)?.tokens?.get(place.id)
                     Field("Current marking (${tokens?.count ?: 0} tokens)") { Code(tokens?.text ?: "empty") }
                 }
             }
@@ -694,7 +873,7 @@ private fun PropertiesPanel(
                         Text("${directionLabel(a.direction)}  $placeName  ${a.inscription}", style = MONO)
                     }
                 }
-                if (!editing && transition.subpageId == null) {
+                if (!editing && transition.subpageId == null && snapshot != null && session != null) {
                     val bindings = snapshot.bindings[transition.id].orEmpty()
                     Field(if (bindings.isEmpty()) "Not enabled" else "Enabled bindings") {
                         for (binding in bindings) {
@@ -755,7 +934,7 @@ private fun PropertiesPanel(
         if (editing && (place != null || transition != null || arc != null)) {
             OutlinedButton(onClick = onDelete, modifier = Modifier.padding(top = 8.dp)) { Text("Delete") }
         }
-        if (!editing) {
+        if (!editing && snapshot != null) {
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
             Heading("Trace")
             if (snapshot.trace.isEmpty()) {
@@ -840,10 +1019,9 @@ private fun BottomBar(
     document: CpnDocument,
     pageId: String,
     mode: CanvasMode,
-    session: SimulationSession,
-    snapshot: SessionSnapshot,
+    session: SimulationSession?,
+    snapshot: SessionSnapshot?,
     problemCount: Int,
-    message: String?,
     onPage: (String) -> Unit,
     act: (() -> Unit) -> Unit,
 ) {
@@ -860,7 +1038,9 @@ private fun BottomBar(
             }
         }
         Spacer(Modifier.weight(1f))
-        if (mode == CanvasMode.SIMULATE) {
+        if (mode == CanvasMode.SIMULATE && (session == null || snapshot == null)) {
+            Text("Not runnable yet", style = MaterialTheme.typography.bodySmall)
+        } else if (mode == CanvasMode.SIMULATE && session != null && snapshot != null) {
             SeedField(session, act)
             OutlinedButton(onClick = { act { session.step() } }, enabled = !snapshot.isDead) { Text("Step") }
             OutlinedButton(onClick = { act { session.run(25) } }, enabled = !snapshot.isDead) { Text("Run 25") }
@@ -874,7 +1054,6 @@ private fun BottomBar(
             Text(status, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 8.dp))
         } else {
             when {
-                message != null -> Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 problemCount > 0 ->
                     Text(
                         if (problemCount == 1) "1 problem, marked in red" else "$problemCount problems, marked in red",

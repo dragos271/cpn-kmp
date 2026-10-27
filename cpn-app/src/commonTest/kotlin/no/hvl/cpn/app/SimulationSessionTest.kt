@@ -61,7 +61,7 @@ class SimulationSessionTest {
             val model = example()
             val session = SimulationSession(model, seed = 2026)
             session.run(25)
-            val engine = Simulator(model.net, 2026).apply { run(25) }
+            val engine = Simulator(model.net!!, 2026).apply { run(25) }
             assertEquals(engine.trace.map { it.toString() }, session.snapshot().trace.map { it.toString() })
             assertEquals(StopReason.MAX_STEPS, session.snapshot().lastStop)
         }

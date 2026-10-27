@@ -46,7 +46,7 @@ public object JsonNetFormat {
     public fun load(text: String): LoadedModel {
         val root = root(text)
         val net = JsonNetReader(root).read()
-        return LoadedModel(net, JsonDocumentReader(root).read())
+        return LoadedModel(net, JsonDocumentReader(root).read(), source = text)
     }
 
     private fun root(text: String): JsonObject {
@@ -60,10 +60,16 @@ public object JsonNetFormat {
     }
 }
 
-/** A model as both the engine and an editor need it. */
+/**
+ * A model as both the engine and an editor need it. [net] is the executable net, or null when the
+ * model only exists as an editable document (new models, or documents with structural edits) and
+ * cannot run before the CPN ML evaluator (T2.5). [source] is the JSON the net was read from, kept so
+ * saving can write layout changes back into it.
+ */
 public data class LoadedModel(
-    val net: Net,
+    val net: Net?,
     val document: no.hvl.cpn.io.model.CpnDocument,
+    val source: String? = null,
 )
 
 private class ColourSetSpec(

@@ -109,7 +109,7 @@ class JsonDocumentTest {
     @Test
     fun documentAndNetShareIds() {
         val (net, document) = JsonNetFormat.load(protocol)
-        val netPage = net.page("Protocol")
+        val netPage = net!!.page("Protocol")
         val docPage = document.pages.single()
         assertEquals(netPage.places.map { it.id }, docPage.places.map { it.id })
         assertEquals(netPage.transitions.map { it.id }, docPage.transitions.map { it.id })

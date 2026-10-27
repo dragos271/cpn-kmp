@@ -73,3 +73,11 @@ with at most 100 colours; the binding search enumerates them.
   `= <> < <= > >=`, `andalso orelse`, and `{"op": "not", "args": [a]}`.
 - `{"if": c, "then": a, "else": b}`
 - `{"tuple": [a, b]}`
+
+## Editable documents
+
+The app saves models whose structure you changed in a second format, marked with
+`"format": "cpn-document"`. It stores the layout and every inscription as CPN ML text, exactly what the
+editor shows. These documents open in the app but run only once the CPN ML evaluator exists (T2.5).
+Models whose layout is all that changed are saved back in the runnable format above, so
+`cpn simulate` keeps working on them.

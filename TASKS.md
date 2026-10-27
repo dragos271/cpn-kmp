@@ -137,6 +137,7 @@ Runs alongside the iterations. The engine stays headless; the app only uses `cpn
   Executing edited CPN ML inscriptions needs T2.5.
   *Status:* done except type errors (they arrive with T2.4); syntax and colour-set errors are live.
 - **A6 Open and save.** Desktop file dialogs; web upload / download. Open `.cpn` files once T3.1 exists.
+  *Status:* done for JSON models and the editable document format; `.cpn` waits for T3.1.
 - **A7 State-space view.** After T3.4: the standard report and an explorable state graph.
 - **A8 Distribution.** Desktop installers (dmg / msi / deb) and the web build published from CI (e.g. GitHub Pages).
 

@@ -8,6 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -26,6 +27,8 @@ fun App() {
     MaterialTheme {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             var model by remember { mutableStateOf<LoadedModel?>(null) }
+            // Where the current model lives; the bundled example has no file, so its first Save asks.
+            var location by remember { mutableStateOf<String?>(null) }
             var loadError by remember { mutableStateOf<String?>(null) }
             LaunchedEffect(Unit) {
                 try {
@@ -38,7 +41,14 @@ fun App() {
             when {
                 loadError != null -> Text(loadError!!, Modifier.padding(24.dp), color = MaterialTheme.colorScheme.error)
                 loaded == null -> Text("Loading model…", Modifier.padding(24.dp))
-                else -> EditorScreen(loaded)
+                else ->
+                    // A new model starts a fresh editor: history, selection and simulation belong to one model.
+                    key(loaded) {
+                        EditorScreen(loaded, location) { opened, openedFrom ->
+                            location = openedFrom
+                            model = opened
+                        }
+                    }
             }
         }
     }
