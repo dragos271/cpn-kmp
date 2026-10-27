@@ -2,6 +2,7 @@ package no.hvl.cpn.io
 
 import no.hvl.cpn.core.ArcDirection
 import no.hvl.cpn.io.model.Point
+import no.hvl.cpn.io.model.check
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -99,11 +100,16 @@ class JsonDocumentTest {
                     it.inscription
             }
         assertEquals("(n,d)", texts["TransmitPacket/A/PLACE_TO_TRANSITION"])
-        assertEquals("if success then (n,d) else empty", texts["TransmitPacket/B/TRANSITION_TO_PLACE"])
+        assertEquals("if success then 1`(n,d) else empty", texts["TransmitPacket/B/TRANSITION_TO_PLACE"])
         assertEquals("if n = k then k + 1 else k", texts["ReceivePacket/NextRec/TRANSITION_TO_PLACE"])
         assertEquals("if n = k then data ^ d else data", texts["ReceivePacket/DataReceived/TRANSITION_TO_PLACE"])
         assertEquals("(n > 0) andalso (not false)", page.transition("Protocol.ReceivePacket")!!.guard)
         assertEquals("", page.transition("Protocol.TransmitPacket")!!.guard)
+    }
+
+    @Test
+    fun theProtocolTypeChecks() {
+        assertEquals(emptyList(), JsonNetFormat.load(protocol).document.check())
     }
 
     @Test

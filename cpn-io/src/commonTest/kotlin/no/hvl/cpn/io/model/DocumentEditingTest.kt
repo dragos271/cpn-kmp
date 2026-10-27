@@ -126,10 +126,38 @@ class DocumentEditingTest {
     }
 
     @Test
+    fun checkReportsTypeErrors() {
+        val (doc, place, transition) = empty.withPlaceAndTransition()
+        val arc = assertIs<ConnectResult.Connected>(doc.connect("Main", place, transition))
+        val typed =
+            arc.document
+                .updatePlace("Main", place) { it.copy(colourSet = "NO", initialMarking = "1`\"three\"") }
+                .updateTransition("Main", transition) { it.copy(guard = "n + 1") }
+                .updateArc("Main", arc.arcId) { it.copy(inscription = "1`(n, m)") }
+        val problems = typed.check().associateBy({ it.elementId to it.field }, { it.message })
+        assertEquals(
+            "1:1: initial marking has type string ms, but the place holds NO: expected int or int ms",
+            problems[place to ProblemField.INITIAL_MARKING],
+        )
+        assertEquals("1:1: a guard must be bool or a list of bools, not int", problems[transition to ProblemField.GUARD])
+        assertEquals("1:7: unbound value or constructor: m", problems[arc.arcId to ProblemField.INSCRIPTION])
+        val fixed =
+            typed
+                .updateArc("Main", arc.arcId) {
+                    it.copy(inscription = "1`(n, n)")
+                }.check()
+                .associateBy({ it.elementId to it.field }, { it.message })
+        assertEquals(
+            "1:1: arc inscription has type (int * int) ms, but the place holds NO: expected int or int ms",
+            fixed[arc.arcId to ProblemField.INSCRIPTION],
+        )
+    }
+
+    @Test
     fun checkReportsDeclarationErrors() {
         val bad = empty.copy(declarations = "colset NO = int;\ncolset P = product NO * DATA;\nvar x : MISSING;")
         assertEquals(
-            listOf("2:1: unknown colour set DATA", "3:1: unknown colour set MISSING"),
+            listOf("2:25: unknown colour set DATA", "3:9: unknown colour set MISSING"),
             bad.check().filter { it.field == ProblemField.DECLARATIONS }.map { it.message },
         )
         assertEquals(

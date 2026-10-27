@@ -2,12 +2,15 @@ package no.hvl.cpn.io.model
 
 import no.hvl.cpn.lang.ast.ColsetDecl
 import no.hvl.cpn.lang.ast.Declarations
+import no.hvl.cpn.lang.ast.Expr
 import no.hvl.cpn.lang.ast.SourceText
-import no.hvl.cpn.lang.ast.VarDecl
+import no.hvl.cpn.lang.ast.Span
 import no.hvl.cpn.lang.colour.ColourSetEnvironment
 import no.hvl.cpn.lang.colour.ColsetDeclarationException
 import no.hvl.cpn.lang.parse.CpnMlParser
 import no.hvl.cpn.lang.parse.ParseException
+import no.hvl.cpn.lang.types.TypeChecker
+import no.hvl.cpn.lang.types.TypeError
 
 /** Which part of an element a problem is about, so an editor can show it next to the right field. */
 public enum class ProblemField { DECLARATIONS, COLOUR_SET, INITIAL_MARKING, GUARD, INSCRIPTION }
@@ -23,82 +26,111 @@ public data class Problem(
 )
 
 /**
- * Checks what can be checked before the type checker (T2.4) exists: the declarations and every
- * inscription must parse as CPN ML, every place needs a declared colour set, and every arc of an
- * ordinary transition needs an inscription. Fast enough to run after every edit.
+ * Checks a model the way CPN Tools' syntax check does, fast enough to run after every edit:
+ *
+ * - the declarations parse and type-check (T2.2, T2.4), and their colour sets can be built (T2.3);
+ * - every place has a declared colour set;
+ * - every inscription parses and has the right type: initial markings and arc inscriptions denote
+ *   tokens of their place's colour set (a colour or a multiset), guards are booleans;
+ * - every arc of an ordinary transition has an inscription.
  */
 public fun CpnDocument.check(): List<Problem> {
     val problems = mutableListOf<Problem>()
     val parser = CpnMlParser()
+    val checker = TypeChecker()
 
-    // Declarations first: their infix declarations change how inscriptions parse.
+    // Declarations first: they declare the colour sets, variables and functions inscriptions use,
+    // and their infix declarations change how inscriptions parse.
     val declarationsSource = SourceText("declarations", declarations)
-    val parsedDeclarations: Declarations? =
+    val parsed: Declarations? =
         try {
             parser.parseDeclarations(declarationsSource)
         } catch (e: ParseException) {
-            problems += Problem(null, ProblemField.DECLARATIONS, located(e))
+            problems += Problem(null, ProblemField.DECLARATIONS, located(e.source, e.span, e.reason))
             null
         }
-
-    val colourSets = ColourSetEnvironment.standard(source = declarationsSource)
-    for (decl in parsedDeclarations?.declarations.orEmpty()) {
-        when (decl) {
-            is ColsetDecl ->
-                try {
-                    colourSets.declare(decl)
-                } catch (e: ColsetDeclarationException) {
-                    problems += Problem(null, ProblemField.DECLARATIONS, "${declarationsSource.position(decl.span.start)}: ${e.reason}")
-                }
-            is VarDecl ->
-                if (colourSets[decl.colset.text] == null) {
-                    problems +=
-                        Problem(
-                            null,
-                            ProblemField.DECLARATIONS,
-                            "${declarationsSource.position(decl.span.start)}: unknown colour set ${decl.colset.text}",
-                        )
-                }
-            else -> Unit
+    if (parsed != null) {
+        val typeErrors = checker.checkDeclarations(parsed, declarationsSource)
+        for (e in typeErrors) problems += Problem(null, ProblemField.DECLARATIONS, located(declarationsSource, e.span, e.reason))
+        // Building the colour sets finds what types cannot: empty ranges, repeated constants.
+        val colourSets = ColourSetEnvironment.standard(source = declarationsSource)
+        for (decl in parsed.declarations.filterIsInstance<ColsetDecl>()) {
+            if (typeErrors.any { it.span.start in decl.span.start until decl.span.end }) continue
+            try {
+                colourSets.declare(decl)
+            } catch (e: ColsetDeclarationException) {
+                problems += Problem(null, ProblemField.DECLARATIONS, located(declarationsSource, decl.span, e.reason))
+            } catch (e: IllegalArgumentException) {
+                // A colour set this one builds on was not built; that problem is already reported.
+            }
         }
     }
-    // If the declarations do not parse, do not also report every colour set as unknown.
-    val coloursKnown = parsedDeclarations != null
+    // With broken declarations every inscription would look wrong; check only their syntax then.
+    val typeCheck = parsed != null
 
-    fun parse(
+    fun expression(
         text: String,
         elementId: String,
         field: ProblemField,
-    ) {
-        if (text.isBlank()) return
-        try {
-            parser.parseExpression(SourceText(elementId, text))
+    ): Pair<Expr, SourceText>? {
+        val source = SourceText(elementId, text)
+        return try {
+            parser.parseExpression(source) to source
         } catch (e: ParseException) {
-            problems += Problem(elementId, field, located(e))
+            problems += Problem(elementId, field, located(e.source, e.span, e.reason))
+            null
         }
+    }
+
+    fun report(
+        errors: List<TypeError>,
+        elementId: String,
+        field: ProblemField,
+        source: SourceText,
+    ) {
+        for (e in errors) problems += Problem(elementId, field, located(source, e.span, e.reason))
     }
 
     for (page in pages) {
         for (place in page.places) {
+            val colourKnown = place.colourSet.isNotBlank() && checker.environment.colourSet(place.colourSet) != null
             when {
                 place.colourSet.isBlank() -> problems += Problem(place.id, ProblemField.COLOUR_SET, "A place needs a colour set")
-                coloursKnown && colourSets[place.colourSet] == null ->
-                    problems += Problem(place.id, ProblemField.COLOUR_SET, "Unknown colour set ${place.colourSet}")
+                typeCheck && !colourKnown -> problems += Problem(place.id, ProblemField.COLOUR_SET, "Unknown colour set ${place.colourSet}")
             }
-            parse(place.initialMarking, place.id, ProblemField.INITIAL_MARKING)
+            if (place.initialMarking.isBlank()) continue
+            val (expr, source) = expression(place.initialMarking, place.id, ProblemField.INITIAL_MARKING) ?: continue
+            if (typeCheck &&
+                colourKnown
+            ) {
+                report(checker.checkInitialMarking(expr, place.colourSet, source), place.id, ProblemField.INITIAL_MARKING, source)
+            }
         }
-        for (transition in page.transitions) parse(transition.guard, transition.id, ProblemField.GUARD)
+        for (transition in page.transitions) {
+            if (transition.guard.isBlank()) continue
+            val (expr, source) = expression(transition.guard, transition.id, ProblemField.GUARD) ?: continue
+            if (typeCheck) report(checker.checkGuard(expr, source), transition.id, ProblemField.GUARD, source)
+        }
         for (arc in page.arcs) {
             // Socket arcs of substitution transitions carry no inscription.
             if (page.transition(arc.transitionId)?.subpageId != null) continue
             if (arc.inscription.isBlank()) {
                 problems += Problem(arc.id, ProblemField.INSCRIPTION, "An arc needs an inscription")
-            } else {
-                parse(arc.inscription, arc.id, ProblemField.INSCRIPTION)
+                continue
+            }
+            val (expr, source) = expression(arc.inscription, arc.id, ProblemField.INSCRIPTION) ?: continue
+            val colourSet = page.place(arc.placeId)?.colourSet
+            if (typeCheck && colourSet != null && checker.environment.colourSet(colourSet) != null) {
+                report(checker.checkArcInscription(expr, colourSet, source), arc.id, ProblemField.INSCRIPTION, source)
             }
         }
     }
     return problems
 }
 
-private fun located(e: ParseException): String = "${e.source.position(e.span.start)}: ${e.reason}"
+/** `line:column: reason`, the position within the field's own text. */
+private fun located(
+    source: SourceText,
+    span: Span,
+    reason: String,
+): String = if (span.isNone) reason else "${source.position(span.start)}: $reason"

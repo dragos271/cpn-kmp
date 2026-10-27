@@ -222,23 +222,30 @@ internal class JsonDocumentReader(
         return if (counts.isEmpty()) emptyText else counts.entries.joinToString("++") { (text, n) -> "$n`$text" }
     }
 
+    /**
+     * An arc inscription as CPN ML. On its own, a single token may be written bare (`n`, `(n,d)`);
+     * inside `if` branches and `++` sums every part must be a multiset ([multiset] true), so it is
+     * written with its count (``1`n``), or both branches of an `if` would have different types.
+     */
     private fun arcText(
         json: JsonElement,
         kind: Kind,
+        multiset: Boolean = false,
     ): String {
-        if (json is JsonPrimitive) return json.content
+        if (json is JsonPrimitive) return if (multiset) "1`${json.content}" else json.content
         val obj = json as JsonObject
         val count = (obj["count"] as? JsonPrimitive)?.intOrNull ?: 1
-        val prefix = if (count == 1) "" else "$count`"
+        val prefix = if (count == 1 && !multiset) "" else "$count`"
         return when {
             "var" in obj -> prefix + obj.string("var", "")
             "pattern" in obj -> prefix + obj.array("pattern", "").joinToString(",", "(", ")") { (it as JsonPrimitive).content }
             "tokens" in obj -> multiset(kind, obj.array("tokens", ""), emptyText = "empty")
-            "expr" in obj -> if (count == 1) expression(obj.getValue("expr")) else prefix + atom(obj.getValue("expr"))
-            "if" in obj -> "if ${expression(
-                obj.getValue("if"),
-            )} then ${arcText(obj.getValue("then"), kind)} else ${arcText(obj.getValue("else"), kind)}"
-            else -> obj.array("sum", "").joinToString(" ++ ") { arcText(it, kind) }
+            "expr" in obj -> if (prefix.isEmpty()) expression(obj.getValue("expr")) else prefix + atom(obj.getValue("expr"))
+            "if" in obj -> {
+                val condition = expression(obj.getValue("if"))
+                "if $condition then ${arcText(obj.getValue("then"), kind, true)} else ${arcText(obj.getValue("else"), kind, true)}"
+            }
+            else -> obj.array("sum", "").joinToString(" ++ ") { arcText(it, kind, true) }
         }
     }
 

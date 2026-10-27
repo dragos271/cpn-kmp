@@ -3,6 +3,7 @@ package no.hvl.cpn.app
 import kotlinx.coroutines.test.runTest
 import no.hvl.cpn.app.resources.Res
 import no.hvl.cpn.io.JsonNetFormat
+import no.hvl.cpn.io.model.check
 import no.hvl.cpn.sim.Simulator
 import no.hvl.cpn.sim.StopReason
 import kotlin.test.Test
@@ -22,6 +23,7 @@ class SimulationSessionTest {
             assertEquals(8, page.places.size)
             assertEquals(5, page.transitions.size)
             assertEquals(13, (page.places.map { it.position } + page.transitions.map { it.position }).toSet().size)
+            assertEquals(emptyList(), model.document.check(), "the example parses and type-checks")
         }
 
     @Test

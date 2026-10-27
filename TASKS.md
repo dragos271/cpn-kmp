@@ -83,6 +83,8 @@ The goal is real CPN ML inscriptions, plus a Python-like front-end that shares t
 - **T2.3 Colour sets.** `unit`, `bool`, `int` (with ranges), `string`, `enum`, `index`, `product`, `record`, `union`, `list`, `subset`, and `alias`. Each has membership, `all()` for finite sets, `size`, an order, and the CPN Tools standard functions (`ord`, `col`, `mkstr`, `ran`, …).
 - **T2.4 Type checker.** Hindley–Milner with SML value restriction, equality types and overloading (`+` on int and real). Error messages should point to the inscription.
   *Done:* types all corpus declarations; golden tests for error messages.
+  *Status:* done and used by the app's checks; checking the whole corpus waits for T3.5. Simplifications: `int`
+  stands for intinf and time (D8), and `@+` is typed `'a * int -> 'a` until timed nets (T3.2).
 - **T2.5 Evaluator.** A tree-walking interpreter: closures, pattern matching, exceptions, and the multiset operators (`++`, `--`, `` ` ``). Include the SML Basis subset that models use (`List`, `String`, `Int`, `Real`, `Option`).
   *Done:* the I1 nets are rebuilt with text inscriptions and give identical traces.
 - **T2.6 Python-like syntax spec.** Write the language definition (a thesis deliverable): grammar, mapping table SML ↔ new syntax, and what is deliberately not supported.
@@ -135,7 +137,7 @@ Runs alongside the iterations. The engine stays headless; the app only uses `cpn
 - **A5 Editor.** Create, move and delete places, transitions and arcs; edit names, colour sets, initial markings,
   inscriptions and declarations with live syntax and type errors (T2.2, T2.4, T2.9); undo / redo.
   Executing edited CPN ML inscriptions needs T2.5.
-  *Status:* done except type errors (they arrive with T2.4); syntax and colour-set errors are live.
+  *Status:* done; syntax, colour-set and type errors are live (T2.2, T2.3, T2.4).
 - **A6 Open and save.** Desktop file dialogs; web upload / download. Open `.cpn` files once T3.1 exists.
   *Status:* done for JSON models and the editable document format; `.cpn` waits for T3.1.
 - **A7 State-space view.** After T3.4: the standard report and an explorable state graph.
