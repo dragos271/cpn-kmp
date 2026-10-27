@@ -1,94 +1,130 @@
 package no.hvl.cpn.app
 
-import no.hvl.cpn.core.Net
-import no.hvl.cpn.core.Place
+import no.hvl.cpn.core.FlatNet
+import no.hvl.cpn.core.PageInstance
+import no.hvl.cpn.core.Transition
+import no.hvl.cpn.io.LoadedModel
 import no.hvl.cpn.sim.BindingElement
 import no.hvl.cpn.sim.Occurrence
 import no.hvl.cpn.sim.RunResult
 import no.hvl.cpn.sim.Simulator
 import no.hvl.cpn.sim.StopReason
 
-/** What the screen shows after a change: computed once, so the binding search runs once per step. */
+/** Tokens on one place, for the canvas: CPN Tools' count bubble and marking box. */
+data class PlaceTokens(
+    val count: Int,
+    val text: String,
+)
+
+/** What the canvas overlays on one page while simulating, keyed by document element id. */
+data class PageOverlay(
+    val tokens: Map<String, PlaceTokens>,
+    val enabledTransitions: Set<String>,
+) {
+    companion object {
+        val EMPTY = PageOverlay(emptyMap(), emptySet())
+    }
+}
+
+/** What the screen shows after a change: computed once per change, so the binding search runs once. */
 data class SessionSnapshot(
     val revision: Int,
     val stepCount: Int,
-    val marking: List<PlaceRow>,
     val enabled: List<BindingElement>,
     val trace: List<Occurrence>,
     val lastStop: StopReason?,
+    val overlays: Map<String, PageOverlay>,
+    /** Enabled bindings per document transition id (`Page.Name`). */
+    val bindings: Map<String, List<BindingElement>>,
 ) {
     val isDead: Boolean get() = enabled.isEmpty()
-}
 
-data class PlaceRow(
-    val name: String,
-    val tokenCount: Int,
-    val tokens: String,
-)
+    fun overlay(pageId: String): PageOverlay = overlays[pageId] ?: PageOverlay.EMPTY
+}
 
 /**
  * The app's view of one simulation: a thin, UI-free wrapper around the engine's [Simulator], so the
- * app shows exactly what `cpn simulate` computes. The UI renders [snapshot] and re-reads it after
- * each action.
+ * app shows exactly what `cpn simulate` computes. It maps the engine's flattened net back onto the
+ * document's pages, so the canvas can draw tokens and enabled transitions on the right shapes.
+ * Pages used several times (by several substitution transitions) show their first instance.
  */
 class SimulationSession(
-    val model: Net,
+    val model: LoadedModel,
     seed: Long,
 ) {
     var seed: Long = seed
         private set
 
-    private var simulator = Simulator(model, seed)
+    private var simulator = Simulator(model.net, seed)
 
-    /** Bumped after every change; the UI reads it to know when to redraw. */
     var revision: Int = 0
         private set
 
-    /** Why the last automatic run stopped, for the status line. */
     var lastStop: StopReason? = null
         private set
 
-    /** Places of the flattened net, named as in CPN Tools (`Page'Place 1`). */
-    val places: List<Place<*>> get() =
-        simulator.flatNet.net.pages
-            .single()
-            .places
+    private val flat: FlatNet get() = simulator.flatNet
 
-    val enabled: List<BindingElement> get() = simulator.enabled()
+    /** The page instance shown for a document page (whose id is the net page's name). */
+    private fun instanceOf(pageId: String): PageInstance? =
+        model.net.pages
+            .firstOrNull { it.name == pageId }
+            ?.let { flat.instancesOf(it).firstOrNull() }
 
-    val trace: List<Occurrence> get() = simulator.trace
+    private fun flatTransition(
+        pageId: String,
+        transitionId: String,
+    ): Transition? {
+        val instance = instanceOf(pageId) ?: return null
+        val transition = instance.page.transitions.firstOrNull { it.id == transitionId && !it.isSubstitution } ?: return null
+        return flat.transition(instance, transition)
+    }
 
-    val stepCount: Int get() = simulator.stepCount
+    fun snapshot(): SessionSnapshot {
+        val enabled = simulator.enabled()
+        val enabledByFlat = enabled.groupBy { it.transition }
+        val overlays = HashMap<String, PageOverlay>()
+        val bindings = HashMap<String, List<BindingElement>>()
+        for (page in model.document.pages) {
+            val instance = instanceOf(page.id) ?: continue
+            val tokens =
+                instance.page.places.associate { place ->
+                    val flatPlace = flat.place(instance, place)
+                    place.id to PlaceTokens(simulator.marking[flatPlace].size, simulator.marking.tokensOf(flatPlace))
+                }
+            val enabledHere = mutableSetOf<String>()
+            for (transition in instance.page.transitions) {
+                if (transition.isSubstitution) continue
+                val elements = enabledByFlat[flat.transition(instance, transition)].orEmpty()
+                if (elements.isNotEmpty()) {
+                    enabledHere += transition.id
+                    bindings[transition.id] = elements
+                }
+            }
+            overlays[page.id] = PageOverlay(tokens, enabledHere)
+        }
+        return SessionSnapshot(revision, simulator.stepCount, enabled, simulator.trace, lastStop, overlays, bindings)
+    }
 
-    val isDead: Boolean get() = simulator.isDead()
-
-    fun tokensOf(place: Place<*>): String = simulator.marking.tokensOf(place)
-
-    fun tokenCount(place: Place<*>): Int = simulator.marking[place].size
-
-    fun snapshot(): SessionSnapshot =
-        SessionSnapshot(
-            revision = revision,
-            stepCount = stepCount,
-            marking = places.map { PlaceRow(it.name, tokenCount(it), tokensOf(it)) },
-            enabled = enabled,
-            trace = trace,
-            lastStop = lastStop,
-        )
-
-    /** Fires a binding element the user picked. */
     fun fire(element: BindingElement): Occurrence = simulator.fire(element).also { changed(null) }
 
-    /** One random step; null if the marking is dead. */
+    /** Clicking a transition: fire it with a random enabled binding. Null if it is not enabled. */
+    fun fireTransition(
+        pageId: String,
+        transitionId: String,
+    ): Occurrence? {
+        val transition = flatTransition(pageId, transitionId) ?: return null
+        return simulator.fireRandom(transition)?.also { changed(null) }
+    }
+
     fun step(): Occurrence? = simulator.step().also { changed(if (it == null) StopReason.DEAD else null) }
 
     fun run(maxSteps: Int): RunResult = simulator.run(maxSteps).also { changed(it.reason) }
 
-    /** Back to the initial marking, optionally with a new seed. */
     fun reset(newSeed: Long = seed) {
         if (newSeed != seed) {
             seed = newSeed
-            simulator = Simulator(model, newSeed)
+            simulator = Simulator(model.net, newSeed)
         } else {
             simulator.reset()
         }

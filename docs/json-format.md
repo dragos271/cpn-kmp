@@ -48,6 +48,9 @@ Only pairs are supported for products.
 
 An `<arc>` is `{"place": "P", "inscription": <inscription>}`. `both` is a CPN Tools double arc.
 
+Places, transitions and substitutions may have `"x"` and `"y"`: their centre on the canvas, in pixels,
+with y growing downwards. Elements without a position are placed automatically by the app.
+
 ## Arc inscriptions
 
 | JSON | CPN ML | Binds variables? |

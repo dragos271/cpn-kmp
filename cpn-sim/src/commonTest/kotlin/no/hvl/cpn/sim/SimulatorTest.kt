@@ -127,6 +127,19 @@ class SimulatorTest {
     }
 
     @Test
+    fun fireRandomPicksABindingOfTheGivenTransition() {
+        val sim = simulator(seed = 3)
+        sim.step() // SendPacket
+        val transmit = sim.transition("Protocol'TransmitPacket 1")
+        val occurrence = sim.fireRandom(transmit)!!
+        assertEquals(transmit, occurrence.element.transition)
+        assertNull(sim.fireRandom(sim.transition("Protocol'ReceiveAck 1")), "not enabled")
+        assertEquals(2, sim.stepCount)
+        val again = simulator(seed = 3).apply { step() }
+        assertEquals(occurrence.toString(), again.fireRandom(again.transition("Protocol'TransmitPacket 1")).toString(), "seeded")
+    }
+
+    @Test
     fun manualFiringChecksEnabling() {
         val sim = simulator()
         val notEnabled = BindingElement(sim.transition("Protocol'SendPacket 1"), Binding.of(protocol.n to 2, protocol.d to "OUR"))

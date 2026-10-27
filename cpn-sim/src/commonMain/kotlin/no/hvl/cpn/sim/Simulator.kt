@@ -90,6 +90,16 @@ public class Simulator(
      */
     public fun fire(element: BindingElement): Occurrence = record(element)
 
+    /**
+     * Fires [transition] with one of its enabled bindings chosen at random (clicking a transition in
+     * CPN Tools); null if it is not enabled. Uses the same seeded random source as [step].
+     */
+    public fun fireRandom(transition: Transition): Occurrence? {
+        val bindings = bindingSearch.enabledBindings(transition, marking)
+        if (bindings.isEmpty()) return null
+        return record(bindings[random.nextInt(bindings.size)])
+    }
+
     /** Runs automatic steps until the net is dead, [maxSteps] steps were taken, or [until] holds after a step. */
     public fun run(
         maxSteps: Int,

@@ -11,20 +11,20 @@
       "name": "Protocol",
       "places": [
         {
-          "name": "PacketsToSend", "colset": "NOxDATA",
+          "name": "PacketsToSend", "x": 100, "y": 110, "colset": "NOxDATA",
           "init": [[1, "COL"], [2, "OUR"], [3, "ED "], [4, "PET"], [5, "RI "], [6, "NET"]]
         },
-        { "name": "A", "colset": "NOxDATA" },
-        { "name": "B", "colset": "NOxDATA" },
-        { "name": "C", "colset": "NO" },
-        { "name": "D", "colset": "NO" },
-        { "name": "NextSend", "colset": "NO", "init": [1] },
-        { "name": "NextRec", "colset": "NO", "init": [1] },
-        { "name": "DataReceived", "colset": "DATA", "init": [""] }
+        { "name": "A", "x": 530, "y": 110, "colset": "NOxDATA" },
+        { "name": "B", "x": 910, "y": 110, "colset": "NOxDATA" },
+        { "name": "C", "x": 1110, "y": 450, "colset": "NO" },
+        { "name": "D", "x": 600, "y": 450, "colset": "NO" },
+        { "name": "NextSend", "x": 340, "y": 280, "colset": "NO", "init": [1] },
+        { "name": "NextRec", "x": 1350, "y": 280, "colset": "NO", "init": [1] },
+        { "name": "DataReceived", "x": 1350, "y": 110, "colset": "DATA", "init": [""] }
       ],
       "transitions": [
         {
-          "name": "SendPacket",
+          "name": "SendPacket", "x": 340, "y": 110,
           "both": [
             { "place": "PacketsToSend", "inscription": { "pattern": ["n", "d"] } },
             { "place": "NextSend", "inscription": "n" }
@@ -32,7 +32,7 @@
           "out": [{ "place": "A", "inscription": { "pattern": ["n", "d"] } }]
         },
         {
-          "name": "TransmitPacket",
+          "name": "TransmitPacket", "x": 720, "y": 110,
           "in": [{ "place": "A", "inscription": { "pattern": ["n", "d"] } }],
           "out": [{
             "place": "B",
@@ -40,7 +40,7 @@
           }]
         },
         {
-          "name": "ReceivePacket",
+          "name": "ReceivePacket", "x": 1110, "y": 110,
           "in": [
             { "place": "B", "inscription": { "pattern": ["n", "d"] } },
             { "place": "NextRec", "inscription": "k" },
@@ -74,12 +74,12 @@
           ]
         },
         {
-          "name": "TransmitAck",
+          "name": "TransmitAck", "x": 860, "y": 450,
           "in": [{ "place": "C", "inscription": "n" }],
           "out": [{ "place": "D", "inscription": { "if": { "var": "success" }, "then": "n", "else": { "tokens": [] } } }]
         },
         {
-          "name": "ReceiveAck",
+          "name": "ReceiveAck", "x": 340, "y": 450,
           "in": [
             { "place": "D", "inscription": "n" },
             { "place": "NextSend", "inscription": "k" }

@@ -37,17 +37,34 @@ public object JsonNetFormat {
      * @throws ModelFormatException if the JSON does not follow the format.
      * @throws no.hvl.cpn.core.InvalidNetException if it does, but the net is not well-formed.
      */
-    public fun parse(text: String): Net {
+    public fun parse(text: String): Net = JsonNetReader(root(text)).read()
+
+    /**
+     * The executable net plus the editable document (layout and CPN ML text) for an editor.
+     * Element ids are shared: a document place `Page.P` is the net place with id `Page.P`.
+     */
+    public fun load(text: String): LoadedModel {
+        val root = root(text)
+        val net = JsonNetReader(root).read()
+        return LoadedModel(net, JsonDocumentReader(root).read())
+    }
+
+    private fun root(text: String): JsonObject {
         val root =
             try {
                 Json.parseToJsonElement(text)
             } catch (e: SerializationException) {
                 throw ModelFormatException("", "not valid JSON: ${e.message}")
             }
-        if (root !is JsonObject) throw ModelFormatException("", "expected a JSON object at the top level")
-        return JsonNetReader(root).read()
+        return root as? JsonObject ?: throw ModelFormatException("", "expected a JSON object at the top level")
     }
 }
+
+/** A model as both the engine and an editor need it. */
+public data class LoadedModel(
+    val net: Net,
+    val document: no.hvl.cpn.io.model.CpnDocument,
+)
 
 private class ColourSetSpec(
     val colourSet: ColourSet<Any?>,
