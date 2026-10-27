@@ -6,18 +6,24 @@ Goal: a Kotlin Multiplatform library + CLI that loads, simulates and analyses Co
 with no GUI, runs existing CPN Tools `.cpn` models, and supports a Python-like inscription syntax
 that keeps ML semantics.
 
-"Headless" here means: everything works with no editor. You drive it from a **CLI** (`cpn simulate`, `cpn statespace`, …),
-from a **library API** (JVM / JS / native), and in **CI pipelines**. There is no GUI in scope.
+"Headless" here means: the engine works with no editor. You drive it from a **CLI** (`cpn simulate`, `cpn statespace`, …),
+from a **library API** (JVM / JS / native), and in **CI pipelines**.
+
+A **Kotlin Multiplatform app** (Compose Multiplatform, desktop + web) is also required. It is a front-end
+*on top of* the headless engine: it uses the same public API as the CLI, and the engine modules never depend on it
+(track A below).
 
 ---
 
 ## Architecture (target)
 
 ```
+cpn-app          Compose Multiplatform app: desktop (macOS, Windows, Linux) + web (Wasm)
 cpn-cli          Clikt CLI → JVM jar + native binaries (macOS, Linux, Windows)
 cpn-api          Public facade: JVM API, @JsExport JS/WASM API, C-ABI native lib
 ─────────────────────────────────────────────────────────── shared commonMain ──
-cpn-io           .cpn (CPN Tools XML) importer, JSON model format, report writers
+cpn-io           .cpn (CPN Tools XML) importer, JSON model format, report writers,
+                 editable model document (ids, layout, inscription text) → compiled to cpn-core nets
 cpn-statespace   Reachability graph, SCC graph, standard state-space report
 cpn-sim          Enabling, binding search, firing, random/stepwise sim, timed nets
 cpn-lang         Lexers + parsers (CPN ML and Python-like) → shared AST
@@ -26,7 +32,7 @@ cpn-core         Net model: places, transitions, arcs, colour sets, markings
 ```
 
 Rule: `cpn-core`, `cpn-lang`, `cpn-sim`, `cpn-statespace`, `cpn-io` are 100% `commonMain`, with no
-platform code. Platform-specific code lives only in `cpn-api` and `cpn-cli`.
+platform code. Platform-specific code lives only in `cpn-api`, `cpn-cli` and `cpn-app`.
 
 ---
 
@@ -42,6 +48,7 @@ platform code. Platform-specific code lives only in `cpn-api` and `cpn-cli`.
 | D6 | Reference outputs from CPN Tools | Run CPN Tools 4.x on Windows (or Wine) via Access/CPN, export to JSON golden files once; tests compare offline |
 | D7 | XML parsing in commonMain | `io.github.pdvrieze.xmlutil` (KMP) or a small hand-written SAX parser |
 | D8 | Big integers (SML `IntInf`) | Plain `Long` for `int`; add a KMP bignum lib only if the corpus needs it |
+| D9 | App | Compose Multiplatform; desktop (JVM) + web (wasmJs); simulate, inspect **and edit** models |
 
 ---
 
@@ -110,6 +117,28 @@ The goal is to run real CPN Tools models and produce state-space reports.
 - **T4.6 Syntax user study (RQ2).** Task material in both syntaxes, protocol, measurement of errors and time (needs ethics/consent per HVL rules).
 - **T4.7 Write-up.** Architecture lessons, results and threats to validity.
 
+
+## Track A — Kotlin Multiplatform app (desktop + web)
+
+Runs alongside the iterations. The engine stays headless; the app only uses `cpn-api` / public engine APIs.
+
+- **A1 App skeleton.** `cpn-app` module with Compose Multiplatform: desktop (JVM) and web (wasmJs, browser) from one
+  shared UI in `commonMain`. First screen runs the example model through the real engine.
+  *Done:* `./gradlew :cpn-app:run` opens a window on macOS; the web build runs in a browser; CI builds both.
+- **A2 Model document.** An editable model separate from the executable `Net`: element ids, positions, page
+  structure, declarations and inscriptions as text. Saved as JSON; compiled to a `Net` (JSON-expression inscriptions
+  now, CPN ML after T2.5). Automatic layout for models without positions. The `.cpn` importer (T3.1) produces it too.
+- **A3 Net canvas.** Draw places, transitions, arcs, inscriptions and markings; pan and zoom; select elements;
+  one tab per page of a hierarchical net.
+- **A4 Simulation UI.** Enabled transitions highlighted; choose a binding or fire at random; step / run with a seed;
+  reset; trace panel; stop reasons. Same results as `cpn simulate` for the same seed.
+- **A5 Editor.** Create, move and delete places, transitions and arcs; edit names, colour sets, initial markings,
+  inscriptions and declarations with live syntax and type errors (T2.2, T2.4, T2.9); undo / redo.
+  Executing edited CPN ML inscriptions needs T2.5.
+- **A6 Open and save.** Desktop file dialogs; web upload / download. Open `.cpn` files once T3.1 exists.
+- **A7 State-space view.** After T3.4: the standard report and an explorable state graph.
+- **A8 Distribution.** Desktop installers (dmg / msi / deb) and the web build published from CI (e.g. GitHub Pages).
+
 ---
 
 ## Suggested order and dependencies
@@ -123,6 +152,8 @@ T3.5 (start corpus early, during I1!) → T3.1 → T3.3 → T3.4 → T3.6 → T3
                                       └→ T3.2
 T4.1 (needs Windows/Wine; start in I2) → T4.2 → T4.3 / T4.4 / T4.5 → T4.7
 T4.6 (needs T2.7 + T2.8)
+A1 → A2 → A3 → A4            (works on the current engine)
+A2 + A3 + T2.4/T2.5 → A5 → A6 → (T3.1) .cpn in the app → (T3.4) A7 → A8
 ```
 
 Start early, off the critical path: **T3.5 corpus** and **T4.1 reference harness**. Every later iteration

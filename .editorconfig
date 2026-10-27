@@ -10,7 +10,11 @@ indent_size = 4
 [*.{kt,kts}]
 max_line_length = 140
 ktlint_code_style = ktlint_official
-ktlint_function_naming_ignore_when_annotated_with = Test
+ktlint_function_naming_ignore_when_annotated_with = Test, Composable
 
 [*.{yml,yaml,toml,md}]
 indent_size = 2
+
+# Generated code (e.g. Compose resource accessors in build/generated) is not ours to lint.
+[**/build/**.{kt,kts}]
+ktlint_standard = disabled

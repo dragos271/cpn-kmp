@@ -63,6 +63,15 @@ jobs:
           cpn-cli/build/install/cpn-jvm/bin/cpn simulate examples/simple-protocol.json --seed 2026 -n 500 --format json > jvm.json
           cpn-cli/build/bin/${{ matrix.native-dir }}/releaseExecutable/${{ matrix.exe }} simulate examples/simple-protocol.json --seed 2026 -n 500 --format json > native.json
           diff jvm.json native.json
+      - name: Build the app (desktop and web)
+        if: matrix.os == 'ubuntu-latest'
+        run: ./gradlew :cpn-app:desktopJar :cpn-app:wasmJsBrowserDistribution
+      - name: Upload the web app
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v7
+        with:
+          name: cpn-app-web
+          path: cpn-app/build/dist/wasmJs/productionExecutable
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v7

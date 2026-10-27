@@ -1,6 +1,9 @@
 plugins {
     // Loaded once at the root so every module shares the same Kotlin plugin classloader.
     alias(libs.plugins.kotlin.multiplatform) apply false
+    alias(libs.plugins.kotlin.compose) apply false
+    alias(libs.plugins.compose.multiplatform) apply false
+    alias(libs.plugins.ktlint) apply false
 }
 
 // kotlinWasmNpmInstall does not always write build/wasm/yarn.lock (seen on Windows CI with a warm
