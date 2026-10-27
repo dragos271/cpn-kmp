@@ -46,6 +46,9 @@ import kotlin.math.sin
 
 enum class CanvasMode { EDIT, SIMULATE }
 
+/** Editing tools from the shape palette. With no tool, dragging moves shapes. */
+enum class Tool { PLACE, TRANSITION, ARC, SUBPAGE }
+
 /**
  * Pan and zoom of the canvas. World units are density-independent pixels (like Compose's dp), so a
  * model looks the same on retina and ordinary screens: screen = world * zoom * density + pan.
@@ -108,25 +111,34 @@ data class CanvasColors(
     val enabledStroke: Color,
     val tokenFill: Color,
     val tokenText: Color,
+    val error: Color,
 )
 
 /**
  * Draws one page of a CPN in CPN Tools notation (ellipses for places, rectangles for transitions,
  * thick rectangles for substitution transitions, arcs with arrowheads and inscriptions) on a dot
- * grid. Drag the background to pan, scroll to zoom. In [CanvasMode.EDIT], drag shapes to move them;
- * in [CanvasMode.SIMULATE], click an enabled transition to fire it.
+ * grid. Drag the background to pan and scroll to zoom.
+ *
+ * In [CanvasMode.EDIT]: drag shapes to move them; with the place, transition or subpage [tool],
+ * click to add one; with the arc tool, drag from one shape to another. Elements in [problems] get
+ * a red marker. In [CanvasMode.SIMULATE]: click an enabled transition to fire it.
  */
 @Composable
 fun NetCanvas(
     page: PageDocument,
     mode: CanvasMode,
+    tool: Tool?,
     selection: String?,
     overlay: PageOverlay?,
+    problems: Set<String>,
     viewport: Viewport,
     colors: CanvasColors,
     onSelect: (String?) -> Unit,
     onMove: (String, Point) -> Unit,
+    onMoveEnd: () -> Unit,
     onFire: (String) -> Unit,
+    onPlace: (Tool, Point) -> Unit,
+    onConnect: (fromId: String, toId: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val measurer = rememberTextMeasurer()
@@ -143,12 +155,19 @@ fun NetCanvas(
         }
     val shapeById = remember(shapes) { shapes.associateBy { it.id } }
     val arcs = remember(page, shapeById) { arcLines(page, shapeById) }
+    // The arc being drawn with the arc tool: from a shape's centre to the pointer.
+    var arcPreview by remember { mutableStateOf<Pair<NodeShape, Point>?>(null) }
 
     val currentShapes by rememberUpdatedState(shapes)
+    val currentArcs by rememberUpdatedState(arcs)
     val currentMode by rememberUpdatedState(mode)
+    val currentTool by rememberUpdatedState(tool)
     val currentOnSelect by rememberUpdatedState(onSelect)
     val currentOnMove by rememberUpdatedState(onMove)
+    val currentOnMoveEnd by rememberUpdatedState(onMoveEnd)
     val currentOnFire by rememberUpdatedState(onFire)
+    val currentOnPlace by rememberUpdatedState(onPlace)
+    val currentOnConnect by rememberUpdatedState(onConnect)
 
     Canvas(
         modifier
@@ -157,36 +176,54 @@ fun NetCanvas(
             .pointerInput(viewport) {
                 awaitEachGesture {
                     val down = awaitFirstDown()
-                    val hit = hitTest(currentShapes, viewport.toWorld(down.position))
+                    val downWorld = viewport.toWorld(down.position)
+                    val hit = hitTest(currentShapes, downWorld)
+                    val editing = currentMode == CanvasMode.EDIT
+                    val drawingArc = editing && currentTool == Tool.ARC && hit != null
                     val startPan = viewport.pan
                     val startCenter = hit?.center
                     var dragged = false
+                    var last = down.position
+                    if (drawingArc) arcPreview = hit to downWorld
                     while (true) {
                         val event = awaitPointerEvent()
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
                         if (!change.pressed) break
+                        last = change.position
                         val delta = change.position - down.position
                         if (!dragged && delta.getDistance() > viewConfiguration.touchSlop) dragged = true
                         if (dragged) {
-                            if (hit != null && currentMode == CanvasMode.EDIT) {
-                                currentOnMove(
-                                    hit.id,
-                                    snap(
-                                        Point(
-                                            startCenter!!.x + delta.x / viewport.scale,
-                                            startCenter.y + delta.y / viewport.scale,
-                                        ),
-                                    ),
-                                )
-                            } else {
-                                viewport.pan = startPan + delta
+                            when {
+                                drawingArc -> arcPreview = hit to viewport.toWorld(change.position)
+                                hit != null && editing && currentTool == null ->
+                                    currentOnMove(
+                                        hit.id,
+                                        snap(Point(startCenter!!.x + delta.x / viewport.scale, startCenter.y + delta.y / viewport.scale)),
+                                    )
+                                else -> viewport.pan = startPan + delta
                             }
                             change.consume()
                         }
                     }
-                    if (!dragged) {
-                        currentOnSelect(hit?.id)
-                        if (hit != null && !hit.isPlace && currentMode == CanvasMode.SIMULATE) currentOnFire(hit.id)
+                    val upWorld = viewport.toWorld(last)
+                    arcPreview = null
+                    when {
+                        drawingArc ->
+                            hitTest(currentShapes, upWorld)?.let { target ->
+                                if (target.id !=
+                                    hit.id
+                                ) {
+                                    currentOnConnect(hit.id, target.id)
+                                }
+                            }
+                        dragged && hit != null && editing -> currentOnMoveEnd()
+                        dragged -> Unit
+                        editing && currentTool != null && currentTool != Tool.ARC -> currentOnPlace(currentTool!!, snap(upWorld))
+                        else -> {
+                            val selected = hit?.id ?: arcAt(currentArcs, downWorld, tolerance = 6.0 / viewport.zoom)?.id
+                            currentOnSelect(selected)
+                            if (hit != null && !hit.isPlace && currentMode == CanvasMode.SIMULATE) currentOnFire(hit.id)
+                        }
                     }
                 }
             }.pointerInput(viewport) {
@@ -212,16 +249,26 @@ fun NetCanvas(
             val labelStyle = TextStyle(fontSize = 12.sp, color = colors.text, fontFamily = FontFamily.Monospace)
             val noteStyle = TextStyle(fontSize = 11.sp, color = colors.secondaryText, fontStyle = FontStyle.Italic)
 
-            for (arc in arcs) drawArcLine(arc, colors.stroke)
+            for (arc in arcs) {
+                val colour =
+                    when (arc.id) {
+                        selection -> colors.selection
+                        in problems -> colors.error
+                        else -> colors.stroke
+                    }
+                drawArcLine(arc, colour, width = if (arc.id == selection) 3f else 1.5f)
+            }
             for (arcDoc in page.arcs) {
                 if (arcDoc.inscription.isBlank()) continue
                 val line = arcs.firstOrNull { it.id == arcDoc.id } ?: continue
-                drawLabel(measurer, ellipsize(arcDoc.inscription, 34), line.labelAnchor(), labelStyle, centered = true)
+                val style = if (arcDoc.id in problems) labelStyle.copy(color = colors.error) else labelStyle
+                drawLabel(measurer, ellipsize(arcDoc.inscription, 34), line.labelAnchor(), style, centered = true)
             }
 
             for (place in page.places) {
                 val shape = shapeById.getValue(place.id)
                 drawPlace(shape, colors, selected = place.id == selection)
+                if (place.id in problems) drawProblem(shape, colors.error)
                 drawLabel(measurer, place.name, shape.center, nameStyle, centered = true, middle = true)
                 drawLabel(measurer, place.colourSet, Point(shape.right - 6, shape.bottom + 2), noteStyle)
                 if (overlay == null) {
@@ -246,11 +293,23 @@ fun NetCanvas(
                     selected =
                         transition.id == selection,
                 )
+                if (transition.id in problems) drawProblem(shape, colors.error)
                 drawLabel(measurer, transition.name, shape.center, nameStyle, centered = true, middle = true)
                 if (transition.guard.isNotBlank()) {
                     drawLabel(measurer, ellipsize("[${transition.guard}]", 40), Point(shape.left, shape.top - 18), labelStyle)
                 }
                 transition.subpageId?.let { drawLabel(measurer, it, Point(shape.left + 4, shape.bottom + 2), noteStyle) }
+            }
+
+            arcPreview?.let { (from, to) ->
+                val start = from.boundaryToward(to)
+                drawLine(
+                    colors.selection,
+                    Offset(start.x.toFloat(), start.y.toFloat()),
+                    Offset(to.x.toFloat(), to.y.toFloat()),
+                    strokeWidth = 1.5f,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f)),
+                )
             }
         }
     }
@@ -326,13 +385,28 @@ private fun DrawScope.drawSelection(
     )
 }
 
+/** A red outline around an element whose inscriptions have problems. */
+private fun DrawScope.drawProblem(
+    shape: NodeShape,
+    color: Color,
+) {
+    drawRoundRect(
+        color,
+        Offset(shape.left.toFloat() - 3, shape.top.toFloat() - 3),
+        Size((shape.halfWidth * 2).toFloat() + 6, (shape.halfHeight * 2).toFloat() + 6),
+        CornerRadius(4f),
+        style = Stroke(1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 3f))),
+    )
+}
+
 private fun DrawScope.drawArcLine(
     arc: ArcLine,
     color: Color,
+    width: Float = 1.5f,
 ) {
     val start = Offset(arc.start.x.toFloat(), arc.start.y.toFloat())
     val end = Offset(arc.end.x.toFloat(), arc.end.y.toFloat())
-    drawLine(color, start, end, strokeWidth = 1.5f)
+    drawLine(color, start, end, strokeWidth = width)
     drawArrowHead(start, end, color)
     if (arc.bothEnds) drawArrowHead(end, start, color)
 }

@@ -149,6 +149,32 @@ fun hitTest(
     point: Point,
 ): NodeShape? = shapes.lastOrNull { it.contains(point) }
 
+/** Distance from [p] to the line segment of [arc]. */
+fun distanceToArc(
+    arc: ArcLine,
+    p: Point,
+): Double {
+    val dx = arc.end.x - arc.start.x
+    val dy = arc.end.y - arc.start.y
+    val lengthSquared = dx * dx + dy * dy
+    val t = if (lengthSquared == 0.0) 0.0 else (((p.x - arc.start.x) * dx + (p.y - arc.start.y) * dy) / lengthSquared).coerceIn(0.0, 1.0)
+    val cx = arc.start.x + t * dx - p.x
+    val cy = arc.start.y + t * dy - p.y
+    return sqrt(cx * cx + cy * cy)
+}
+
+/** The arc closest to [point] within [tolerance], for selecting arcs by clicking them. */
+fun arcAt(
+    arcs: List<ArcLine>,
+    point: Point,
+    tolerance: Double,
+): ArcLine? =
+    arcs
+        .map { it to distanceToArc(it, point) }
+        .filter { it.second <= tolerance }
+        .minByOrNull { it.second }
+        ?.first
+
 /** Smallest box around [shapes], or null if there are none. */
 fun bounds(shapes: List<NodeShape>): Pair<Point, Point>? {
     if (shapes.isEmpty()) return null

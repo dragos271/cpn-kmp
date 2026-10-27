@@ -84,6 +84,17 @@ class GeometryTest {
     }
 
     @Test
+    fun arcsCanBeClickedNearTheirLine() {
+        val horizontal = ArcLine("h", Point(0.0, 0.0), Point(100.0, 0.0), bothEnds = false)
+        val vertical = ArcLine("v", Point(50.0, 10.0), Point(50.0, 100.0), bothEnds = false)
+        assertEquals(3.0, distanceToArc(horizontal, Point(40.0, 3.0)), 1e-9)
+        assertEquals(5.0, distanceToArc(horizontal, Point(-3.0, 4.0)), 1e-9, "beyond the end, distance to the end point")
+        assertEquals("h", arcAt(listOf(horizontal, vertical), Point(20.0, 4.0), tolerance = 6.0)?.id)
+        assertEquals("v", arcAt(listOf(horizontal, vertical), Point(52.0, 60.0), tolerance = 6.0)?.id)
+        assertNull(arcAt(listOf(horizontal, vertical), Point(20.0, 30.0), tolerance = 6.0))
+    }
+
+    @Test
     fun snappingAndBounds() {
         assertEquals(Point(120.0, 50.0), snap(Point(123.0, 47.0)))
         assertEquals(Point(60.0, 75.0) to Point(345.0, 125.0), bounds(listOf(place, transition)))
