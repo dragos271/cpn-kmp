@@ -41,6 +41,11 @@ public data class TransitionNode(
     val position: Point,
     /** Set for substitution transitions: the page they stand for. */
     val subpageId: String? = null,
+    /**
+     * For substitution transitions: socket place id (on this page) to port place id (on the
+     * subpage). A socket without an entry is glued to the port with the same name.
+     */
+    val portAssignments: Map<String, String> = emptyMap(),
 )
 
 /** An arc between a place and a transition on the same page. */

@@ -30,7 +30,31 @@ class CpnCommandTest {
         }
         """.trimIndent()
 
-    private val files = mapOf("countdown.json" to model, "broken.json" to """{"name": "X", "pages": []}""")
+    /** The countdown as an editable document: CPN ML text, run by the evaluator (T2.5). */
+    private val document =
+        """
+        {
+          "format": "cpn-document", "version": 1, "name": "Countdown",
+          "declarations": "colset N = int with 0..3; var n : N; fun dec n = n - 1;",
+          "pages": [{
+            "id": "Main", "name": "Main",
+            "places": [{ "id": "Main.P", "name": "P", "colset": "N", "init": "1`3", "x": 0, "y": 0 }],
+            "transitions": [{ "id": "Main.Dec", "name": "Dec", "guard": "n > 0", "x": 100, "y": 0 }],
+            "arcs": [
+              { "id": "a1", "place": "Main.P", "transition": "Main.Dec", "direction": "in", "inscription": "n" },
+              { "id": "a2", "place": "Main.P", "transition": "Main.Dec", "direction": "out", "inscription": "dec n" }
+            ]
+          }]
+        }
+        """.trimIndent()
+
+    private val files =
+        mapOf(
+            "countdown.json" to model,
+            "countdown.cpnd" to document,
+            "divide.cpnd" to document.replace("fun dec n = n - 1;", "fun dec n = n div 0;"),
+            "broken.json" to """{"name": "X", "pages": []}""",
+        )
 
     private fun cpn() = CpnCommand(readFile = { files[it] ?: throw NoSuchElementException("no such file") })
 
@@ -44,6 +68,21 @@ class CpnCommandTest {
     @Test
     fun printsVersion() {
         assertTrue(cpn().test("--version").stdout.contains("0.1.0-SNAPSHOT"))
+    }
+
+    @Test
+    fun runsEditableDocumentsLikeJsonModels() {
+        val json = cpn().test("simulate countdown.json --seed 7")
+        val document = cpn().test("simulate countdown.cpnd --seed 7")
+        assertEquals(0, document.statusCode, document.stderr)
+        assertEquals(json.stdout, document.stdout)
+    }
+
+    @Test
+    fun reportsExceptionsRaisedByInscriptions() {
+        val result = cpn().test("simulate divide.cpnd --seed 7")
+        assertEquals(1, result.statusCode)
+        assertTrue("uncaught exception Div" in result.stderr, result.stderr)
     }
 
     @Test

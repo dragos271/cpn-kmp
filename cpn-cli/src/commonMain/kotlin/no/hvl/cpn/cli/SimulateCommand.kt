@@ -19,8 +19,10 @@ import kotlinx.serialization.json.put
 import no.hvl.cpn.core.ColourSet
 import no.hvl.cpn.core.InvalidNetException
 import no.hvl.cpn.core.Net
-import no.hvl.cpn.io.JsonNetFormat
+import no.hvl.cpn.io.ModelFiles
 import no.hvl.cpn.io.ModelFormatException
+import no.hvl.cpn.io.model.compile
+import no.hvl.cpn.lang.eval.EvaluationException
 import no.hvl.cpn.sim.RunResult
 import no.hvl.cpn.sim.Simulator
 import no.hvl.cpn.sim.StopReason
@@ -33,7 +35,7 @@ private const val MODEL_ERROR = 1
 class SimulateCommand(
     private val readFile: (String) -> String,
 ) : CliktCommand(name = "simulate") {
-    private val file by argument(help = "Model file in the JSON format (see docs/json-format.md)")
+    private val file by argument(help = "Model file: a JSON model or an editable cpn-document (see docs/json-format.md)")
     private val steps by option("--steps", "-n", help = "Maximum number of steps").int().restrictTo(min = 0).default(1000)
     private val seed by option(
         "--seed",
@@ -63,7 +65,15 @@ class SimulateCommand(
             } catch (e: Exception) {
                 throw CliktError("Cannot read '$file': ${e.message}", statusCode = MODEL_ERROR)
             }
-        return modelErrors { JsonNetFormat.parse(text) }
+        val model = modelErrors { ModelFiles.open(text) }
+        return model.net ?: throw CliktError(
+            "$file: the model cannot run:\n" +
+                model.document
+                    .compile()
+                    .problems
+                    .joinToString("\n") { "  ${it.elementId ?: "declarations"}: ${it.message}" },
+            statusCode = MODEL_ERROR,
+        )
     }
 
     private fun <T> modelErrors(block: () -> T): T =
@@ -77,6 +87,9 @@ class SimulateCommand(
             throw CliktError("$file: ${e.message}", statusCode = MODEL_ERROR)
         } catch (e: IllegalStateException) {
             // Raised while firing, e.g. an output colour outside its colour set.
+            throw CliktError("$file: simulation failed: ${e.message}", statusCode = MODEL_ERROR)
+        } catch (e: EvaluationException) {
+            // An inscription raised an exception, e.g. Div.
             throw CliktError("$file: simulation failed: ${e.message}", statusCode = MODEL_ERROR)
         }
 

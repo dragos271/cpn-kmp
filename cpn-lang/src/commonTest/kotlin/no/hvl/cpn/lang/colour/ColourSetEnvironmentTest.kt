@@ -3,6 +3,7 @@ package no.hvl.cpn.lang.colour
 import no.hvl.cpn.lang.ast.SourceText
 import no.hvl.cpn.lang.parse.CpnMlParser
 import no.hvl.cpn.lang.value.MlCon
+import no.hvl.cpn.lang.value.MlReal
 import no.hvl.cpn.lang.value.MlTuple
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -68,7 +69,7 @@ class ColourSetEnvironmentTest {
         assertEquals("yes", env["ANSWER"]!!.mkstr(true))
         assertEquals(3, env["SMALL"]!!.size)
         assertEquals(21, env["BIG"]!!.size)
-        assertTrue(0.25 in env["PROB"]!!)
+        assertTrue(MlReal(0.25) in env["PROB"]!!)
         assertTrue(10L in env["CLOCK"]!!)
         assertTrue("hello" in env["LETTERS"]!!)
         assertEquals(MlCon("blue"), env["COLOUR"]!!.col(2))

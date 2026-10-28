@@ -72,7 +72,8 @@ class ModelFilesTest {
         val saved = ModelFiles.save(model, withPlace)
         assertEquals(SavedFormat.DOCUMENT, saved.format)
         val reopened = ModelFiles.open(saved.text)
-        assertNull(reopened.net, "documents run once the evaluator exists")
+        // The document is compiled on opening, so it runs like the original (T2.5).
+        assertEquals("1 Main'Inc 1 <n=0>", Simulator(assertNotNull(reopened.net)).step().toString())
         assertEquals(withPlace, reopened.document)
         assertEquals(
             "P1",

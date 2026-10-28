@@ -3,6 +3,7 @@ package no.hvl.cpn.lang.colour
 import no.hvl.cpn.core.ColourSet
 import no.hvl.cpn.core.Multiset
 import no.hvl.cpn.lang.value.MlCon
+import no.hvl.cpn.lang.value.MlReal
 import no.hvl.cpn.lang.value.MlRecord
 import no.hvl.cpn.lang.value.MlTuple
 import no.hvl.cpn.lang.value.formatConstructed
@@ -258,7 +259,7 @@ public class RealColourSet(
 ) : CpnColourSet(name) {
     override val size: Long? = null
 
-    override fun contains(value: Any?): Boolean = value is Double && !value.isNaN() && (range == null || value in range)
+    override fun contains(value: Any?): Boolean = value is MlReal && !value.value.isNaN() && (range == null || value.value in range)
 
     override fun ord(colour: Any?): Long = throw ColourSetException("ord is not defined for $name: it is infinite")
 
@@ -267,9 +268,9 @@ public class RealColourSet(
     override fun compare(
         a: Any?,
         b: Any?,
-    ): Int = (a as Double).compareTo(b as Double)
+    ): Int = (a as MlReal).compareTo(b as MlReal)
 
-    override fun format(value: Any?): String = formatReal(value as Double)
+    override fun format(value: Any?): String = formatReal((value as MlReal).value)
 }
 
 /**

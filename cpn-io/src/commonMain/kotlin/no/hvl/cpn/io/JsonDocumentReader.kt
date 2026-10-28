@@ -49,6 +49,9 @@ internal class JsonDocumentReader(
     private val kinds =
         linkedMapOf<String, Kind>("UNIT" to Kind.UnitKind, "BOOL" to Kind.BoolKind, "INT" to Kind.IntKind, "STRING" to Kind.StringKind)
 
+    /** The kind of each variable, so literals compared with it are written right (`c = red`, not `c = "red"`). */
+    private val variableKinds = HashMap<String, Kind>()
+
     fun read(): CpnDocument {
         val declarations = mutableListOf<String>()
         for (cs in root.optionalArray("colsets", "")) {
@@ -60,6 +63,7 @@ internal class JsonDocumentReader(
         }
         // CPN Tools style: one `var` line per colour set, e.g. `var n, k : NO;`.
         val variables = root.optionalObject("variables", "")?.entries.orEmpty()
+        for ((name, colourSet) in variables) kinds[(colourSet as JsonPrimitive).content]?.let { variableKinds[name] = it }
         val namesByColourSet = variables.groupBy(keySelector = { (it.value as JsonPrimitive).content }, valueTransform = { it.key })
         for ((colourSet, names) in namesByColourSet) {
             declarations += "var ${names.joinToString(", ")} : $colourSet;"
@@ -147,7 +151,7 @@ internal class JsonDocumentReader(
         for (t in json.optionalArray("transitions", "").map { it as JsonObject }) {
             val name = t.string("name", "")
             val id = idOf(name)
-            transitions += TransitionNode(id, name, t["guard"]?.let(::expression) ?: "", position(t, id))
+            transitions += TransitionNode(id, name, t["guard"]?.let { expression(it, Kind.BoolKind) } ?: "", position(t, id))
             for ((key, direction) in listOf(
                 "in" to ArcDirection.PLACE_TO_TRANSITION,
                 "out" to ArcDirection.TRANSITION_TO_PLACE,
@@ -171,8 +175,21 @@ internal class JsonDocumentReader(
             val name = s.string("name", "")
             val id = idOf(name)
             val subpage = s.string("subpage", "")
-            transitions += TransitionNode(id, name, "", position(s, id), subpageId = subpage)
-            s.optionalObject("assign", "")?.forEach { (socket, port) ->
+            val assignments = s.optionalObject("assign", "").orEmpty()
+            transitions +=
+                TransitionNode(
+                    id,
+                    name,
+                    "",
+                    position(s, id),
+                    subpageId = subpage,
+                    portAssignments =
+                        assignments.entries.associate { (socket, port) ->
+                            idOf(socket) to
+                                "$subpage.${(port as JsonPrimitive).content}"
+                        },
+                )
+            assignments.forEach { (socket, port) ->
                 val direction =
                     when (portsByPage[subpage]?.get((port as JsonPrimitive).content)) {
                         PortType.IN -> ArcDirection.PLACE_TO_TRANSITION
@@ -240,43 +257,74 @@ internal class JsonDocumentReader(
             "var" in obj -> prefix + obj.string("var", "")
             "pattern" in obj -> prefix + obj.array("pattern", "").joinToString(",", "(", ")") { (it as JsonPrimitive).content }
             "tokens" in obj -> multiset(kind, obj.array("tokens", ""), emptyText = "empty")
-            "expr" in obj -> if (prefix.isEmpty()) expression(obj.getValue("expr")) else prefix + atom(obj.getValue("expr"))
+            "expr" in obj -> if (prefix.isEmpty()) expression(obj.getValue("expr"), kind) else prefix + atom(obj.getValue("expr"), kind)
             "if" in obj -> {
-                val condition = expression(obj.getValue("if"))
+                val condition = expression(obj.getValue("if"), Kind.BoolKind)
                 "if $condition then ${arcText(obj.getValue("then"), kind, true)} else ${arcText(obj.getValue("else"), kind, true)}"
             }
             else -> obj.array("sum", "").joinToString(" ++ ") { arcText(it, kind, true) }
         }
     }
 
-    private fun expression(json: JsonElement): String =
+    /**
+     * An expression as CPN ML. [expected] is its kind when known: the JSON format writes enumeration
+     * colours as strings, which CPN ML writes as bare constants.
+     */
+    private fun expression(
+        json: JsonElement,
+        expected: Kind? = null,
+    ): String =
         when (json) {
             is JsonNull -> "()"
             is JsonPrimitive ->
                 when {
-                    json.isString -> formatString(json.content)
+                    json.isString -> if (expected == Kind.EnumKind) json.content else formatString(json.content)
                     json.booleanOrNull != null -> json.content
                     else -> int(json)
                 }
-            is JsonArray -> json.joinToString(",", "(", ")") { expression(it) }
+            is JsonArray -> tuple(json, expected)
             is JsonObject ->
                 when {
                     "var" in json -> json.string("var", "")
-                    "if" in json -> "if ${expression(
-                        json.getValue("if"),
-                    )} then ${expression(json.getValue("then"))} else ${expression(json.getValue("else"))}"
-                    "tuple" in json -> json.array("tuple", "").joinToString(",", "(", ")") { expression(it) }
+                    "if" in json -> {
+                        val condition = expression(json.getValue("if"), Kind.BoolKind)
+                        "if $condition then ${expression(
+                            json.getValue("then"),
+                            expected,
+                        )} else ${expression(json.getValue("else"), expected)}"
+                    }
+                    "tuple" in json -> tuple(json.array("tuple", ""), expected)
                     else -> {
                         val op = json.string("op", "")
                         val args = json.array("args", "")
-                        if (op == "not") "not ${atom(args[0])}" else "${atom(args[0])} $op ${atom(args[1])}"
+                        // Operands share a kind (=, <, +, ^); a variable among them tells which.
+                        val operands = args.firstNotNullOfOrNull { (it as? JsonObject)?.optionalString("var", "")?.let(variableKinds::get) }
+                        if (op ==
+                            "not"
+                        ) {
+                            "not ${atom(args[0], Kind.BoolKind)}"
+                        } else {
+                            "${atom(args[0], operands)} $op ${atom(args[1], operands)}"
+                        }
                     }
                 }
         }
 
+    private fun tuple(
+        elements: JsonArray,
+        expected: Kind?,
+    ): String {
+        val product = expected as? Kind.ProductKind
+        val kinds = listOf(product?.first, product?.second)
+        return elements.withIndex().joinToString(",", "(", ")") { (i, e) -> expression(e, kinds.getOrNull(i)) }
+    }
+
     /** An expression as an operand: compound ones in parentheses. */
-    private fun atom(json: JsonElement): String {
-        val text = expression(json)
+    private fun atom(
+        json: JsonElement,
+        expected: Kind? = null,
+    ): String {
+        val text = expression(json, expected)
         return if (json is JsonObject && ("op" in json || "if" in json)) "($text)" else text
     }
 

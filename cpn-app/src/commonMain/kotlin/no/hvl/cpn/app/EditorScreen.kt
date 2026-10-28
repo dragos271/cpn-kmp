@@ -88,6 +88,7 @@ import no.hvl.cpn.core.ArcDirection
 import no.hvl.cpn.io.LoadedModel
 import no.hvl.cpn.io.ModelFiles
 import no.hvl.cpn.io.SavedFormat
+import no.hvl.cpn.io.model.CompiledModel
 import no.hvl.cpn.io.model.ConnectResult
 import no.hvl.cpn.io.model.CpnDocument
 import no.hvl.cpn.io.model.PageDocument
@@ -98,12 +99,14 @@ import no.hvl.cpn.io.model.addPlace
 import no.hvl.cpn.io.model.addSubstitution
 import no.hvl.cpn.io.model.addTransition
 import no.hvl.cpn.io.model.check
+import no.hvl.cpn.io.model.compile
 import no.hvl.cpn.io.model.connect
 import no.hvl.cpn.io.model.delete
 import no.hvl.cpn.io.model.structure
 import no.hvl.cpn.io.model.updateArc
 import no.hvl.cpn.io.model.updatePlace
 import no.hvl.cpn.io.model.updateTransition
+import no.hvl.cpn.lang.eval.EvaluationException
 import no.hvl.cpn.sim.StopReason
 
 /**
@@ -135,17 +138,49 @@ fun EditorScreen(
     val page = document.page(pageId) ?: document.pages.first()
     val viewport = viewports.getOrPut(page.id) { Viewport() }
 
-    val problems = remember(document) { document.check() }
+    // What runs is the document as it is now: the opened net while only the layout changed,
+    // otherwise the document compiled by the CPN ML evaluator (T2.5). Moving shapes keeps the run.
+    val structure = remember(document) { document.structure() }
+    val compiled =
+        remember(structure) {
+            if (model.net != null &&
+                structure == model.document.structure()
+            ) {
+                CompiledModel(model.net, document.check())
+            } else {
+                document.compile()
+            }
+        }
+    val problems = compiled.problems
     val problemIds = remember(problems) { problems.mapNotNull { it.elementId }.toSet() }
-    val edited = remember(document) { document.structure() != model.document.structure() }
+    // Creating the session fails for nets the binding search cannot handle, e.g. a variable bound by no input arc.
+    val started = remember(compiled) { compiled.net?.let { net -> runCatching { SimulationSession(document, net, seed = 2026) } } }
+    val session = started?.getOrNull()
+    val cannotRun =
+        when {
+            compiled.net == null ->
+                "This model can't run yet: fix the ${plural(problems.size, "problem")} marked in red (switch to Edit to see them)."
+            session == null -> "This model can't run: ${started?.exceptionOrNull()?.message}"
+            else -> null
+        }
 
-    // Models without a runnable net (new ones, documents with structural edits) cannot be simulated yet.
-    val session = remember(model) { model.net?.let { SimulationSession(model, seed = 2026) } }
-    var snapshot by remember(session) { mutableStateOf(session?.snapshot()) }
+    /** The session's state for the screen; an inscription that fails (e.g. raises Div) stops the simulation with a message. */
+    fun snapshotOf(session: SimulationSession?): SessionSnapshot? =
+        try {
+            session?.snapshot()
+        } catch (e: EvaluationException) {
+            message = "Simulation stopped: ${e.message}"
+            null
+        }
+    var snapshot by remember(session) { mutableStateOf(snapshotOf(session)) }
 
     fun act(action: () -> Unit) {
-        action()
-        snapshot = session?.snapshot()
+        try {
+            action()
+        } catch (e: EvaluationException) {
+            message = "Simulation stopped: ${e.message}"
+        }
+        snapshot = snapshotOf(session)
     }
 
     // Saving: what was last saved, where, and a short notice about it.
@@ -175,7 +210,7 @@ fun EditorScreen(
             notice =
                 when (saved.format) {
                     SavedFormat.RUNNABLE_MODEL -> "Saved to $where"
-                    SavedFormat.DOCUMENT -> "Saved to $where as an editable document. It runs once the evaluator exists (T2.5)."
+                    SavedFormat.DOCUMENT -> "Saved to $where as an editable document"
                 }
         }
     }
@@ -406,18 +441,7 @@ fun EditorScreen(
                         modifier = Modifier.fillMaxSize(),
                     )
                     if (mode == CanvasMode.SIMULATE) {
-                        when {
-                            session == null ->
-                                Notice(
-                                    "This model can't run yet: models written as editable documents run once the CPN ML evaluator exists (T2.5).",
-                                    Modifier.align(Alignment.TopCenter).padding(10.dp),
-                                )
-                            edited ->
-                                Notice(
-                                    "You've edited the model. Simulation still runs the version you opened: running edited CPN ML needs the evaluator (T2.5).",
-                                    Modifier.align(Alignment.TopCenter).padding(10.dp),
-                                )
-                        }
+                        cannotRun?.let { Notice(it, Modifier.align(Alignment.TopCenter).padding(10.dp)) }
                     }
                     (message ?: notice)?.let { text ->
                         Toast(text, isError = message != null, Modifier.align(Alignment.BottomEnd).padding(10.dp))
@@ -856,6 +880,7 @@ private fun PropertiesPanel(
                             TextButton(onClick = { onOpenPage(subpageId) }) { Text("Open") }
                         }
                     }
+                    problem(transition.id, ProblemField.STRUCTURE)?.let { ProblemText(it) }
                 } else {
                     TextProperty(
                         "Guard",
@@ -929,6 +954,8 @@ private fun PropertiesPanel(
                     error = problems.filter { it.field == ProblemField.DECLARATIONS }.joinToString("\n") { it.message }.ifBlank { null },
                     singleLine = false,
                 ) { v -> edit("declarations") { it.copy(declarations = v) } }
+                // Problems with how the net fits together, found when compiling it.
+                problems.filter { it.field == ProblemField.STRUCTURE && it.elementId == null }.forEach { ProblemText(it.message) }
             }
         }
         if (editing && (place != null || transition != null || arc != null)) {
@@ -1039,7 +1066,7 @@ private fun BottomBar(
         }
         Spacer(Modifier.weight(1f))
         if (mode == CanvasMode.SIMULATE && (session == null || snapshot == null)) {
-            Text("Not runnable yet", style = MaterialTheme.typography.bodySmall)
+            Text("Can't run", style = MaterialTheme.typography.bodySmall)
         } else if (mode == CanvasMode.SIMULATE && session != null && snapshot != null) {
             SeedField(session, act)
             OutlinedButton(onClick = { act { session.step() } }, enabled = !snapshot.isDead) { Text("Step") }
@@ -1092,3 +1119,13 @@ private fun SeedField(
         OutlinedButton(onClick = { act { session.reset(seed ?: session.seed) } }) { Text("Reset") }
     }
 }
+
+@Composable
+private fun ProblemText(text: String) {
+    Text(text, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+}
+
+private fun plural(
+    count: Int,
+    noun: String,
+): String = if (count == 1) "1 $noun" else "$count ${noun}s"

@@ -7,7 +7,7 @@ package no.hvl.cpn.lang.value
  * |------------------------|--------------------------------|
  * | int                    | Int                            |
  * | intinf, time           | Long (D8: no bignums yet)      |
- * | real                   | Double                         |
+ * | real                   | [MlReal]                       |
  * | string / char          | String / Char                  |
  * | bool / unit            | Boolean / Unit                 |
  * | tuple, product         | [MlTuple]                      |
@@ -16,6 +16,18 @@ package no.hvl.cpn.lang.value
  * | list                   | List                           |
  * | multiset               | no.hvl.cpn.core.Multiset       |
  */
+
+/**
+ * A real. Not a bare Double: on Kotlin/JS `2.0` and `2` are the same number, so `is Int` could not
+ * tell an int from a real.
+ */
+public data class MlReal(
+    val value: Double,
+) : Comparable<MlReal> {
+    override fun compareTo(other: MlReal): Int = value.compareTo(other.value)
+
+    override fun toString(): String = formatReal(value)
+}
 
 /** A tuple; colours of product colour sets. Never has one element. */
 public data class MlTuple(
@@ -49,6 +61,7 @@ public data class MlCon(
 public fun formatValue(value: Any?): String =
     when (value) {
         null -> "null"
+        is MlReal -> formatReal(value.value)
         is Int -> formatInt(value.toLong())
         is Long -> formatInt(value)
         is Double -> formatReal(value)

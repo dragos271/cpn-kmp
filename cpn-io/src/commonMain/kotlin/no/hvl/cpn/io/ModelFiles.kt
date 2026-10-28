@@ -18,6 +18,7 @@ import no.hvl.cpn.io.model.PageDocument
 import no.hvl.cpn.io.model.PlaceNode
 import no.hvl.cpn.io.model.Point
 import no.hvl.cpn.io.model.TransitionNode
+import no.hvl.cpn.io.model.compile
 import no.hvl.cpn.io.model.structure
 
 /** How a model was saved, so an editor can tell the user what the file can be used for. */
@@ -60,7 +61,9 @@ public object ModelFiles {
                 throw ModelFormatException("", "not valid JSON: ${e.message}")
             }
         if (root is JsonObject && (root["format"] as? JsonPrimitive)?.content == CpnDocumentFormat.FORMAT) {
-            return LoadedModel(net = null, document = CpnDocumentFormat.read(text))
+            // Editable documents run once compiled; with problems, they open for editing only.
+            val document = CpnDocumentFormat.read(text)
+            return LoadedModel(net = document.compile().net, document = document)
         }
         return JsonNetFormat.load(text)
     }
@@ -204,6 +207,9 @@ public object CpnDocumentFormat {
                                 put("x", coordinate(t.position.x))
                                 put("y", coordinate(t.position.y))
                                 t.subpageId?.let { put("subpage", it) }
+                                if (t.portAssignments.isNotEmpty()) {
+                                    put("ports", buildJsonObject { t.portAssignments.forEach { (socket, port) -> put(socket, port) } })
+                                }
                             },
                         )
                     }
@@ -286,6 +292,17 @@ public object CpnDocumentFormat {
                     guard = obj.optionalString("guard", at) ?: "",
                     position = position(obj, at),
                     subpageId = obj.optionalString("subpage", at),
+                    portAssignments =
+                        obj
+                            .optionalObject("ports", at)
+                            ?.entries
+                            ?.associate { (socket, port) ->
+                                socket to
+                                    (
+                                        (port as? JsonPrimitive)?.takeIf { it.isString }?.content
+                                            ?: fail("$at.ports.$socket", "expected a port id")
+                                    )
+                            }.orEmpty(),
                 )
             }
         val nodeIds = (places.map { it.id } + transitions.map { it.id }).toSet()

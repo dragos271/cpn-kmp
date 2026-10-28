@@ -1,9 +1,10 @@
 package no.hvl.cpn.app
 
 import no.hvl.cpn.core.FlatNet
+import no.hvl.cpn.core.Net
 import no.hvl.cpn.core.PageInstance
 import no.hvl.cpn.core.Transition
-import no.hvl.cpn.io.LoadedModel
+import no.hvl.cpn.io.model.CpnDocument
 import no.hvl.cpn.sim.BindingElement
 import no.hvl.cpn.sim.Occurrence
 import no.hvl.cpn.sim.RunResult
@@ -49,13 +50,12 @@ data class SessionSnapshot(
  * Pages used several times (by several substitution transitions) show their first instance.
  */
 class SimulationSession(
-    val model: LoadedModel,
+    val document: CpnDocument,
+    private val net: Net,
     seed: Long,
 ) {
     var seed: Long = seed
         private set
-
-    private val net = requireNotNull(model.net) { "Only models with a runnable net can be simulated" }
 
     private var simulator = Simulator(net, seed)
 
@@ -67,10 +67,10 @@ class SimulationSession(
 
     private val flat: FlatNet get() = simulator.flatNet
 
-    /** The page instance shown for a document page (whose id is the net page's name). */
+    /** The page instance shown for a document page (net pages have the document's page ids). */
     private fun instanceOf(pageId: String): PageInstance? =
         net.pages
-            .firstOrNull { it.name == pageId }
+            .firstOrNull { it.id == pageId }
             ?.let { flat.instancesOf(it).firstOrNull() }
 
     private fun flatTransition(
@@ -87,7 +87,7 @@ class SimulationSession(
         val enabledByFlat = enabled.groupBy { it.transition }
         val overlays = HashMap<String, PageOverlay>()
         val bindings = HashMap<String, List<BindingElement>>()
-        for (page in model.document.pages) {
+        for (page in document.pages) {
             val instance = instanceOf(page.id) ?: continue
             val tokens =
                 instance.page.places.associate { place ->

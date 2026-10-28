@@ -2,6 +2,7 @@ package no.hvl.cpn.lang.colour
 
 import no.hvl.cpn.core.Multiset
 import no.hvl.cpn.lang.value.MlCon
+import no.hvl.cpn.lang.value.MlReal
 import no.hvl.cpn.lang.value.MlRecord
 import no.hvl.cpn.lang.value.MlTuple
 import kotlin.test.Test
@@ -68,10 +69,11 @@ class CpnColourSetTest {
         assertNull(LongColourSet("ALL", Long.MIN_VALUE..Long.MAX_VALUE).size)
 
         val prob = RealColourSet("PROB", 0.0..1.0)
-        assertTrue(0.5 in prob)
-        assertFalse(1.5 in prob)
-        assertFalse(Double.NaN in prob)
-        assertEquals("~2.5", RealColourSet("REAL").mkstr(-2.5))
+        assertTrue(MlReal(0.5) in prob)
+        assertFalse(MlReal(1.5) in prob)
+        assertFalse(MlReal(Double.NaN) in prob)
+        assertFalse(1 in prob, "an int is not a real, on JS too")
+        assertEquals("~2.5", RealColourSet("REAL").mkstr(MlReal(-2.5)))
     }
 
     @Test

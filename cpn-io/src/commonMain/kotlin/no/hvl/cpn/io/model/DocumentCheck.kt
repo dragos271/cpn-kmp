@@ -12,8 +12,11 @@ import no.hvl.cpn.lang.parse.ParseException
 import no.hvl.cpn.lang.types.TypeChecker
 import no.hvl.cpn.lang.types.TypeError
 
-/** Which part of an element a problem is about, so an editor can show it next to the right field. */
-public enum class ProblemField { DECLARATIONS, COLOUR_SET, INITIAL_MARKING, GUARD, INSCRIPTION }
+/**
+ * Which part of an element a problem is about, so an editor can show it next to the right field.
+ * [STRUCTURE] is about how elements are connected (e.g. an unassigned port), found when compiling.
+ */
+public enum class ProblemField { DECLARATIONS, COLOUR_SET, INITIAL_MARKING, GUARD, INSCRIPTION, STRUCTURE }
 
 /**
  * A problem in a model, e.g. a syntax error in a guard. [elementId] is null for the declarations.

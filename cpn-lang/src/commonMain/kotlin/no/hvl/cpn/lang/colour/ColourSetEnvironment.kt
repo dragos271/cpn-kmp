@@ -27,6 +27,7 @@ import no.hvl.cpn.lang.ast.TimeColset
 import no.hvl.cpn.lang.ast.TupleExpr
 import no.hvl.cpn.lang.ast.UnionColset
 import no.hvl.cpn.lang.ast.UnitColset
+import no.hvl.cpn.lang.value.MlReal
 import no.hvl.cpn.lang.value.MlTuple
 
 /** A `colset` declaration that cannot be turned into a colour set, located in its source. */
@@ -42,7 +43,7 @@ public class ColsetDeclarationException(
  * [LiteralColsetEvaluator] handles constants.
  */
 public interface ColsetEvaluator {
-    /** The value of [expr]: `Int`, `Long`, `Double`, `String`, a list, ... */
+    /** The value of [expr]: `Int`, `Long`, [MlReal], `String`, a list, ... */
     public fun value(expr: Expr): Any?
 
     /** [expr] as a predicate on colours of [base]. */
@@ -59,7 +60,7 @@ public object LiteralColsetEvaluator : ColsetEvaluator {
             is ConstExpr ->
                 when (val c = expr.constant) {
                     is Constant.IntConst -> c.value
-                    is Constant.RealConst -> c.value
+                    is Constant.RealConst -> MlReal(c.value)
                     is Constant.StringConst -> c.value
                     is Constant.CharConst -> c.value
                 }
@@ -126,7 +127,7 @@ public class ColourSetEnvironment(
                 RealColourSet(
                     name,
                     spec.range?.let {
-                        (value(it.low, "a real") { v -> v as? Double })..value(it.high, "a real") { v -> v as? Double }
+                        (value(it.low, "a real") { v -> (v as? MlReal)?.value })..value(it.high, "a real") { v -> (v as? MlReal)?.value }
                     },
                 )
             is TimeColset -> LongColourSet(name, 0..Long.MAX_VALUE)
