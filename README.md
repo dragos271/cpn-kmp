@@ -1,7 +1,10 @@
 # Headless CPN Tool
 
 A headless, cross-platform Coloured Petri Net engine and CLI in Kotlin Multiplatform.
-See [TASKS.md](TASKS.md) for the plan.
+See [TASKS.md](TASKS.md) for the plan, [docs/vision.md](docs/vision.md) and
+[docs/feature-spec.md](docs/feature-spec.md) for what is built and when it is done, [docs/comparison.md](docs/comparison.md)
+for how it compares to CPN Tools and earlier tools, and [docs/ai-process.md](docs/ai-process.md) for how AI-written
+work is checked.
 
 ## Modules
 

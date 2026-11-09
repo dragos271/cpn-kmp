@@ -2,6 +2,9 @@
 
 Source: *A Headless, Cross-Platform Coloured Petri Net Tool* (Dragos Slovineanu, supervisor Patrick Stünkel, HVL/UiB, Oct 2026).
 
+Specs: [vision](docs/vision.md) · [feature spec with definitions of done](docs/feature-spec.md) ·
+[comparison with CPN Tools and earlier HVL tools](docs/comparison.md) · [AI process and checks](docs/ai-process.md).
+
 Goal: a Kotlin Multiplatform library + CLI that loads, simulates and analyses Coloured Petri Nets
 with no GUI, runs existing CPN Tools `.cpn` models, and supports a Python-like inscription syntax
 that keeps ML semantics.
@@ -106,7 +109,16 @@ The goal is to run real CPN Tools models and produce state-space reports.
 
 - **T3.1 .cpn importer.** Parse CPN Tools XML: pages, places, transitions, arcs, inscriptions, the declaration blocks (`globbox`), hierarchy (`subst`, port/socket, fusion), and initial markings.
   *Done:* imports the CPN Tools example models into `cpn-core`.
+- **T3.1b .cpn export.** Write documents as CPN Tools 4.x XML, including models made from scratch in the app (F5).
+  *Done:* exported files have the CPN Tools structure (automated), and five models made from scratch open and run in
+  CPN Tools, recorded in `docs/interop-log.md`.
+- **T3.1c Round-trip stability (important, 2026-11-09 meeting).** `.cpn` → us → `.cpn`, `.cpn` → JSON → `.cpn`
+  and app save → open, repeated for 5 cycles (F6).
+  *Done:* in CI for the whole corpus and ≥ 500 random nets, nothing is lost after one cycle and the bytes
+  are identical from the second export on. Every normalisation is listed in `docs/cpn-format.md`.
 - **T3.2 Timed nets.** Timed colour sets, `@+` delays, timestamps on tokens, a global clock, and the earliest-time step semantics.
+  Time is an **integer** (2026-11-09 meeting). A token is available only when its timestamp ≤ the clock, and
+  delays can be on transitions and on output arcs (F7).
   *Done:* matches the CPN Tools traces for the timed protocol example.
 - **T3.3 State space.** BFS/DFS reachability graph with marking hashing and compact storage, plus limits (nodes, time).
 - **T3.4 SCC + standard report.** Tarjan SCC, home markings, dead markings, dead/live transitions, integer/multiset bounds, and fairness. Output matches the CPN Tools "Standard Report" sections.
@@ -148,6 +160,26 @@ Runs alongside the iterations. The engine stays headless; the app only uses `cpn
   *Status:* done for JSON models and the editable document format; `.cpn` waits for T3.1.
 - **A7 State-space view.** After T3.4: the standard report and an explorable state graph.
 - **A8 Distribution.** Desktop installers (dmg / msi / deb) and the web build published from CI (e.g. GitHub Pages).
+
+## Supervisor meeting 2026-11-09
+
+The meeting notes and where each point is handled:
+
+| Point | Where | Status |
+|---|---|---|
+| Run the earlier tool and compare features (supported / not supported) | [comparison.md](docs/comparison.md) | Matrix done from the theses. Running them needs access: Gjesdal's editor repo is private and Garvik's F# simulator is not public |
+| Stable under repeated import/export (important) | T3.1c, F6 | Not started; JSON documents already round-trip |
+| Import existing `.cpn` files from the web | T3.5 corpus, T3.1 | Not started |
+| Make `.cpn` files from scratch and run them in another CPN tool | T3.1b, F5 | Not started |
+| Timed nets: token availability, delays, integer time | T3.2, F7 | Not started |
+| The report at the end of the earlier work (state-space report) | T3.3, T3.4, F8 | Not started |
+| Document the process, how prompts were used, how AI work is checked, when it is accepted | [ai-process.md](docs/ai-process.md) | Done; kept up to date per task |
+| Play with the green tests | `scripts/mutation-check.py`, ai-process.md §3 | Done: 6 deliberate bugs, 2 survived, tests added |
+| State space analysis | T3.3, T3.4, A7 | Not started |
+| Spec-driven development: vision.md, feature-spec.md (DoD, scope) | [vision.md](docs/vision.md), [feature-spec.md](docs/feature-spec.md) | Done |
+
+Order from here: **T3.5** (start the corpus) → **T3.1** import → **T3.1b** export → **T3.1c** round trip →
+**T3.2** timed → **T3.3/T3.4** state space and report → A7. T2.6–T2.9 (Python-like syntax) follow after.
 
 ---
 
