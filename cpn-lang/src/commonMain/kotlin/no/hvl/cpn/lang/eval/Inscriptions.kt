@@ -2,9 +2,11 @@ package no.hvl.cpn.lang.eval
 
 import no.hvl.cpn.core.ArcInscription
 import no.hvl.cpn.core.Binding
+import no.hvl.cpn.core.Delay
 import no.hvl.cpn.core.Guard
 import no.hvl.cpn.core.Multiset
 import no.hvl.cpn.core.PatternInscription
+import no.hvl.cpn.core.TimedMultiset
 import no.hvl.cpn.core.Variable
 import no.hvl.cpn.core.matching
 import no.hvl.cpn.lang.ast.AppExpr
@@ -108,6 +110,35 @@ public class CpnMlInscriptions(
         source: SourceText? = null,
     ): Multiset<Any?> = conform(toMultiset(interpreter.evaluate(expr, emptyMap(), source)), colourSet)
 
+    /** The initial marking of a timed place: tokens at time 0, or later with `@+` (``1`x@+5``). */
+    public fun timedMultiset(
+        expr: Expr,
+        colourSet: CpnColourSet,
+        source: SourceText? = null,
+    ): TimedMultiset<Any?> = toTimed(interpreter.evaluate(expr, emptyMap(), source)).map { conform(it, colourSet) }
+
+    /** A transition's time region `@+expr` given as [expr] (the expression after `@+`). */
+    public fun delay(
+        expr: Expr,
+        source: SourceText? = null,
+    ): Delay =
+        object : Delay {
+            override val variables: Set<Variable<*>> =
+                interpreter.variablesOf(expr).map { this@CpnMlInscriptions.variables.getValue(it) }.toSet()
+
+            override fun evaluate(binding: Binding): Long =
+                (interpreter.evaluate(expr, values(variables, binding), source) as Number).toLong().also {
+                    if (it < 0) throw EvaluationException(expr.span, "a delay must not be negative, was $it", source)
+                }
+
+            override fun toString(): String = "@+" + (source?.text ?: expr.toString())
+        }
+
+    /** For [no.hvl.cpn.core.Net.clock]: the model time `time()` returns. */
+    public fun setTime(time: Long) {
+        interpreter.now = time
+    }
+
     private open inner class CpnMlArc(
         val expr: Expr,
         override val variables: Set<Variable<*>>,
@@ -116,6 +147,9 @@ public class CpnMlInscriptions(
     ) : ArcInscription<Any?> {
         override fun evaluate(binding: Binding): Multiset<Any?> =
             conform(toMultiset(interpreter.evaluate(expr, values(variables, binding), source)), colourSet)
+
+        override fun evaluateTimed(binding: Binding): TimedMultiset<Any?> =
+            toTimed(interpreter.evaluate(expr, values(variables, binding), source)).map { conform(it, colourSet) }
 
         override fun toString(): String = source?.text ?: expr.toString()
     }

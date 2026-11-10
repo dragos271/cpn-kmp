@@ -514,8 +514,6 @@ private class CpnToolsReader(
         ) {
             if (n > 0) notes += "$n $what"
         }
-        count(transitions.count { it.time.isNotEmpty() }, "transition delays (@+) are ignored until timed nets (T3.2)")
-        count(pages.flatMap { it.arcs }.count { "@+" in it.inscription }, "arc delays (@+) are ignored until timed nets (T3.2)")
         count(transitions.count { it.priority.isNotEmpty() && it.priority != "P_NORMAL" }, "transition priorities are ignored")
         count(net.descendants("monitor").size, "monitors are ignored")
         count(net.children("page").sumOf { it.children("Aux").size }, "auxiliary graphics (text, shapes) are ignored")

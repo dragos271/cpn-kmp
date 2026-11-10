@@ -163,7 +163,12 @@ Out: real-valued time, and `@@` absolute timestamps (unless the corpus needs the
 - The clock never goes backwards (a property test).
 - The app shows timestamps (`1`x@5`) and the clock.
 
-**Status: not started** (T3.2). Today `@+` is parsed and ignored, and `time()` is 0.
+**Status: done, except the comparison with CPN Tools** (T3.2, 2026-11-10).
+- The textbook timed protocol runs with model time. Its first steps (Send Packet at 0, Transmit Packet at 9,
+  retransmission due at 109) were checked by hand against the semantics.
+- Availability, delays, the clock moving forward, and "the clock never goes backwards" are tested, and the app
+  shows timestamps and the clock.
+- Matching CPN Tools' trace needs CPN Tools (T4.1).
 
 ## F8 State space and standard report
 

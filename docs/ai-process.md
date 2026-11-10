@@ -116,6 +116,8 @@ Results on 2026-11-09:
 | M8 | The `.cpn` importer reads `portsock` pairs the wrong way round (added with T3.1) | Caught |
 | M9 | The `.cpn` exporter does not write moved positions (added with T3.1b) | Caught |
 | M10 | The `.cpn` exporter writes `portsock` pairs the wrong way round (added with T3.1b) | Caught |
+| M11 | Timed tokens count as available before their timestamp (added with T3.2) | Caught |
+| M12 | Transition delays are ignored (added with T3.2) | Caught |
 
 M5 and M6 showed real gaps: the whole suite was green with a wrong guard rule. Both now have tests
 in `cpn-lang/.../eval/InscriptionsTest.kt`, and re-running the script reports both as caught. Every

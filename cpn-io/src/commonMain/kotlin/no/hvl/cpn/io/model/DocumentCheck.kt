@@ -19,7 +19,7 @@ import no.hvl.cpn.lang.types.TypeError
  * Which part of an element a problem is about, so an editor can show it next to the right field.
  * [STRUCTURE] is about how elements are connected (e.g. an unassigned port), found when compiling.
  */
-public enum class ProblemField { DECLARATIONS, COLOUR_SET, INITIAL_MARKING, GUARD, INSCRIPTION, STRUCTURE }
+public enum class ProblemField { DECLARATIONS, COLOUR_SET, INITIAL_MARKING, GUARD, TIME, INSCRIPTION, STRUCTURE }
 
 /**
  * A problem in a model, e.g. a syntax error in a guard. [elementId] is null for the declarations.
@@ -130,6 +130,12 @@ public fun CpnDocument.check(): List<Problem> {
         for (transition in page.transitions) {
             if (transition.code.isNotBlank()) {
                 problems += Problem(transition.id, ProblemField.STRUCTURE, "Code segments are not supported yet")
+            }
+            // The time region `@+expr`: the delay must parse and be an integer.
+            timeRegion(transition.time)?.let { delay ->
+                expression(delay, transition.id, ProblemField.TIME)?.let { (expr, source) ->
+                    if (typeCheck) report(checker.checkDelay(expr, source), transition.id, ProblemField.TIME, source)
+                }
             }
             if (transition.guard.isBlank()) continue
             val (expr, source) = expression(transition.guard, transition.id, ProblemField.GUARD) ?: continue

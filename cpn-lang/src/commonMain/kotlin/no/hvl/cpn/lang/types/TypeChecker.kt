@@ -145,6 +145,15 @@ public class TypeChecker(
         source: SourceText? = null,
     ): List<TypeError> = checkTokens(expr, colourSet, source, "initial marking")
 
+    /** A transition's delay (the `expr` of its time region `@+expr`): an integer (D8: time is int). */
+    public fun checkDelay(
+        expr: Expr,
+        source: SourceText? = null,
+    ): List<TypeError> =
+        collect(source) {
+            expect(prune(expression(expr, environment)), INT, expr) { actual, _ -> "a delay must be an int, not $actual" }
+        }
+
     /** A guard is a boolean, or a list of booleans that must all hold (CPN Tools). */
     public fun checkGuard(
         expr: Expr,

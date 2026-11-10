@@ -1107,12 +1107,15 @@ private fun BottomBar(
             OutlinedButton(onClick = { act { session.step() } }, enabled = !snapshot.isDead) { Text("Step") }
             OutlinedButton(onClick = { act { session.run(25) } }, enabled = !snapshot.isDead) { Text("Run 25") }
             OutlinedButton(onClick = { act { session.run(1000) } }, enabled = !snapshot.isDead) { Text("Run to end") }
+            val clock = snapshot.time?.let { "time $it · " } ?: ""
             val status =
-                when {
-                    snapshot.isDead -> "step ${snapshot.stepCount} · dead marking"
-                    snapshot.lastStop == StopReason.MAX_STEPS -> "step ${snapshot.stepCount} · step limit"
-                    else -> "step ${snapshot.stepCount} · ${snapshot.enabled.size} enabled"
-                }
+                clock +
+                    when {
+                        snapshot.isDead -> "step ${snapshot.stepCount} · dead marking"
+                        snapshot.lastStop == StopReason.MAX_STEPS -> "step ${snapshot.stepCount} · step limit"
+                        snapshot.enabled.isEmpty() -> "step ${snapshot.stepCount} · waiting for the clock"
+                        else -> "step ${snapshot.stepCount} · ${snapshot.enabled.size} enabled"
+                    }
             Text(status, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 8.dp))
         } else {
             when {

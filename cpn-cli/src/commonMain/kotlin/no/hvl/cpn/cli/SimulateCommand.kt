@@ -68,7 +68,7 @@ class SimulateCommand(
                 throw CliktError("Cannot read '$file': ${e.message}", statusCode = MODEL_ERROR)
             }
         val model = modelErrors { ModelFiles.open(bytes, ModelFiles.modelName(file)) }
-        // What a .cpn file has that the engine ignores (monitors, priorities, delays until T3.2).
+        // What a .cpn file has that the engine ignores (monitors, priorities, ...).
         for (note in model.notes) echo("note: $note", err = true)
         return model.net ?: throw CliktError(
             "$file: the model cannot run:\n" +

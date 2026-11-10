@@ -1,6 +1,7 @@
 package no.hvl.cpn.io.model
 
 import no.hvl.cpn.core.Arc
+import no.hvl.cpn.core.Delay
 import no.hvl.cpn.core.Guard
 import no.hvl.cpn.core.Multiset
 import no.hvl.cpn.core.Net
@@ -10,8 +11,10 @@ import no.hvl.cpn.core.Substitution
 import no.hvl.cpn.core.Transition
 import no.hvl.cpn.lang.ast.Expr
 import no.hvl.cpn.lang.ast.SourceText
+import no.hvl.cpn.lang.colour.AliasColourSet
 import no.hvl.cpn.lang.colour.ColsetDeclarationException
 import no.hvl.cpn.lang.colour.CpnColourSet
+import no.hvl.cpn.lang.colour.TimedColourSet
 import no.hvl.cpn.lang.eval.CpnMlInscriptions
 import no.hvl.cpn.lang.eval.EvaluationException
 import no.hvl.cpn.lang.eval.Interpreter
@@ -53,6 +56,21 @@ public fun CpnDocument.compile(random: RandomSource = RandomSource.seeded(0)): C
     }
 }
 
+/** The delay expression of a transition's time region `@+expr` (CPN Tools' syntax), or null if there is none. */
+internal fun timeRegion(text: String): String? {
+    val trimmed = text.trim()
+    if (trimmed.isEmpty()) return null
+    return if (trimmed.startsWith("@+")) trimmed.removePrefix("@+").trim() else trimmed
+}
+
+/** A timed colour set, also through aliases (`colset T2 = T` where T is timed). */
+internal fun CpnColourSet.isTimed(): Boolean =
+    when (this) {
+        is TimedColourSet -> true
+        is AliasColourSet -> target.isTimed()
+        else -> false
+    }
+
 /**
  * The name the engine uses in traces and reports: CPN Tools names often span lines ("Packets\nTo
  * Send"), so runs of whitespace become one space. The document keeps the name as written.
@@ -79,7 +97,12 @@ private class DocumentCompiler(
         inscriptions = CpnMlInscriptions(interpreter)
         for (page in document.pages) page(page.id, null)
         // Document order, so prime pages and listings come out as the user arranged them.
-        return Net(document.name, document.pages.map { pages.getValue(it.id) }, inscriptions.variables.values.toList())
+        return Net(
+            document.name,
+            document.pages.map { pages.getValue(it.id) },
+            inscriptions.variables.values.toList(),
+            inscriptions::setTime,
+        )
     }
 
     private fun page(
@@ -116,14 +139,18 @@ private class DocumentCompiler(
 
     private fun place(node: PlaceNode): Place<Any?> {
         val colourSet = interpreter.colourSets[node.colourSet]!!
-        val marking =
-            if (node.initialMarking.isBlank()) {
-                Multiset.empty()
-            } else {
-                val (expr, source) = expression(node.initialMarking, node.id)
-                attempt(node.id, ProblemField.INITIAL_MARKING) { inscriptions.multiset(expr, colourSet, source) }
-            }
-        return Place(node.id, displayName(node.name), colourSet, marking, node.port, node.fusionSet)
+        val timed = colourSet.isTimed()
+        if (node.initialMarking.isBlank()) {
+            return Place(node.id, displayName(node.name), colourSet, Multiset.empty(), node.port, node.fusionSet, timed)
+        }
+        val (expr, source) = expression(node.initialMarking, node.id)
+        if (!timed) {
+            val marking = attempt(node.id, ProblemField.INITIAL_MARKING) { inscriptions.multiset(expr, colourSet, source) }
+            return Place(node.id, displayName(node.name), colourSet, marking, node.port, node.fusionSet)
+        }
+        // Timed: tokens at time 0, or later with @+ (``1`x@+5``).
+        val marking = attempt(node.id, ProblemField.INITIAL_MARKING) { inscriptions.timedMultiset(expr, colourSet, source) }
+        return Place(node.id, displayName(node.name), colourSet, marking.untimed, node.port, node.fusionSet, true, marking)
     }
 
     private fun transition(
@@ -156,7 +183,12 @@ private class DocumentCompiler(
                 val (expr, source) = expression(node.guard, node.id, guard = true)
                 inscriptions.guard(expr, source)
             }
-        return Transition(node.id, displayName(node.name), guard)
+        val delay =
+            timeRegion(node.time)?.let { text ->
+                val (expr, source) = expression(text, node.id)
+                inscriptions.delay(expr, source)
+            } ?: Delay.NONE
+        return Transition(node.id, displayName(node.name), guard, delay = delay)
     }
 
     /** Already parsed successfully by [check], with the same fixities. */

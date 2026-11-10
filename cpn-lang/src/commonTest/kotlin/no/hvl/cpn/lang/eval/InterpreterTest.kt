@@ -176,6 +176,16 @@ class InterpreterTest {
     }
 
     @Test
+    fun delaysAndTheModelTime() {
+        assertEquals("1`5@3+++1`6@0", eval("1`5 @+ 3 ++ 1`6"), "@+ binds tighter than ++")
+        assertEquals("2`7@4", eval("(2`7 @+ 1) @+ 3"))
+        assertEquals("1`5++1`6", eval("(1`5 @+ 3) ++ 1`6 -- empty"), "untimed operators drop delays")
+        val (parser, interpreter) = interpreter("")
+        interpreter.now = 42
+        assertEquals(42, interpreter.evaluate(parser.parseExpression(SourceText("e", "time() + 0"))))
+    }
+
+    @Test
     fun cpnToolsListFunctions() {
         assertEquals("[1,2,3]", eval("[1] ^^ [2] ^^ [3]"))
         assertEquals("(true,false)", eval("(mem [1, 2] 2, mem [1, 2] 3)"))

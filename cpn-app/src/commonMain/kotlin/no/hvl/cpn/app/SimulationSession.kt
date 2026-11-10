@@ -37,9 +37,11 @@ data class SessionSnapshot(
     val overlays: Map<String, PageOverlay>,
     /** Enabled bindings per document transition id (`Page.Name`). */
     val bindings: Map<String, List<BindingElement>>,
+    /** The model time of a timed net (T3.2); null for untimed nets. */
+    val time: Long? = null,
+    /** Nothing is enabled now or, in a timed net, later: a timed net with nothing enabled now may only be waiting for the clock. */
+    val isDead: Boolean = enabled.isEmpty(),
 ) {
-    val isDead: Boolean get() = enabled.isEmpty()
-
     fun overlay(pageId: String): PageOverlay = overlays[pageId] ?: PageOverlay.EMPTY
 }
 
@@ -105,7 +107,18 @@ class SimulationSession(
             }
             overlays[page.id] = PageOverlay(tokens, enabledHere)
         }
-        return SessionSnapshot(revision, simulator.stepCount, enabled, simulator.trace, lastStop, overlays, bindings)
+        val timed = net.isTimed
+        return SessionSnapshot(
+            revision,
+            simulator.stepCount,
+            enabled,
+            simulator.trace,
+            lastStop,
+            overlays,
+            bindings,
+            time = if (timed) simulator.time else null,
+            isDead = enabled.isEmpty() && (!timed || simulator.isDead()),
+        )
     }
 
     fun fire(element: BindingElement): Occurrence = simulator.fire(element).also { changed(null) }

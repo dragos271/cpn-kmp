@@ -13,7 +13,7 @@ app edits and `cpn simulate` runs. It is plain common Kotlin with its own small 
 | `<place>`: `text`, `type`, `initmark`, `posattr` | A place: name, colour set, initial marking, position | **y is negated**: CPN Tools' y axis points up, ours points down |
 | `<port type="In|Out|I/O">` | The place's port type | |
 | `<fusioninfo name>` | The place's fusion set | |
-| `<trans>`: `text`, `cond`, `time`, `priority`, `code` | A transition with guard, time, priority and code | Time is ignored until T3.2; priority is ignored; code segments are reported as unsupported |
+| `<trans>`: `text`, `cond`, `time`, `priority`, `code` | A transition with guard, time, priority and code | The time region `@+expr` is the transition's delay (T3.2); priority is ignored; code segments are reported as unsupported |
 | `<subst subpage portsock="(port,socket)…">` | A substitution transition and its port/socket assignments | The pairs are (port place on the subpage, socket place on this page) |
 | `<arc orientation>`: `PtoT`, `TtoP`, `BOTHDIR`, `Inhibitor`, `Reset` | An arc with direction and kind | Inhibitor and reset arcs are reported as unsupported |
 | `<annot>`, `<bendpoint serial>` | The arc inscription; bend points in serial order | |

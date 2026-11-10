@@ -1,6 +1,7 @@
 package no.hvl.cpn.lang.eval
 
 import no.hvl.cpn.core.Multiset
+import no.hvl.cpn.core.TimedMultiset
 import no.hvl.cpn.lang.ast.SourceText
 import no.hvl.cpn.lang.ast.Span
 import no.hvl.cpn.lang.value.MlCon
@@ -178,6 +179,19 @@ internal fun compareValues(
         else -> throw IllegalArgumentException("cannot compare ${formatValue(a)} and ${formatValue(b)}")
     }
 
-/** A multiset, or a single colour as shorthand for one token of it (CPN ML arc inscriptions). */
+/** A multiset, or a single colour as shorthand for one token of it (CPN ML arc inscriptions); delays (`@+`) are dropped. */
 @Suppress("UNCHECKED_CAST")
-internal fun toMultiset(value: Any?): Multiset<Any?> = value as? Multiset<Any?> ?: Multiset.repeated(value, 1)
+internal fun toMultiset(value: Any?): Multiset<Any?> =
+    when (value) {
+        is Multiset<*> -> value as Multiset<Any?>
+        is TimedMultiset<*> -> (value as TimedMultiset<Any?>).untimed
+        else -> Multiset.repeated(value, 1)
+    }
+
+/** [toMultiset] with delays: what `x @+ d` and sums of such produce; untimed values have delay 0. */
+@Suppress("UNCHECKED_CAST")
+internal fun toTimed(value: Any?): TimedMultiset<Any?> =
+    when (value) {
+        is TimedMultiset<*> -> value as TimedMultiset<Any?>
+        else -> TimedMultiset.at(toMultiset(value), 0)
+    }

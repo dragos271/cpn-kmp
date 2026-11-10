@@ -23,8 +23,9 @@ stops importing, or if fewer than 26 models run.
 Tools; that comparison is T4.2. One model is checked by hand: the textbook's deterministic
 protocol, figure 2.1, delivers all six packets and goes dead after 30 steps, as in the book.
 
-Two of the 26 are timed models running untimed, because delays are ignored until T3.2:
-`10-1TimedProtocol` and `10-19TimedStateSpaces`. Their import notes say so.
+Two of the 26 are timed models, and since T3.2 they run with model time: `10-1TimedProtocol` and
+`10-19TimedStateSpaces`. For the timed protocol, 20 seeds all deliver the data with a clock that
+never goes backwards. The other timed models stop earlier, for the reasons in the table.
 
 ## Why 23 models do not run yet
 
@@ -32,7 +33,7 @@ Two of the 26 are timed models running untimed, because delays are ignored until
 |---|---|---|---|
 | **Multisets are lists.** In CPN Tools `'a ms` *is* `'a list`, so a list can be an initial marking or an arc inscription, and list functions work on multisets | 9: `lecture1`, `lecture3`, `lecture4`, the three `lecture6-statespaces` models, `twophasecommit`, `5-30MultipleReceivers`, `singlePaxos` | Accepts it | Type checker and evaluator: a new task |
 | **SML file I/O and `use`**: `TextIO`, loading `.sml` files, code segments that write logs | 6: the four NatCPN models, `QueueSystem`, `DisCSP` | Runs the SML/NJ Basis | Out of scope (instrumentation and logging), or offer a stub |
-| **Timed patterns** such as `p@t` | 3: the three `PerformanceProtocol` models | Timed nets | T3.2 |
+| **Timed patterns** such as `p@t` (timestamps in function arguments) | 3: the three `PerformanceProtocol` models | Supports them | Not supported yet: `@` (absolute timestamps) is not part of T3.2 |
 | **Missing library functions**: colour set `mult`, `sort_ms` | 2: `DistributedDataBase`, `MQTT` | Built in | Small additions |
 | **Inhibitor and reset arcs** | 1: `lecture2-ptnets` | Supports them | Open question for the supervisor |
 | **Equality on `real`** | 1: `fuelstation-cpn-ide` | Its SML/NJ version accepts `=` on reals, which SML'97 does not | Decide whether to allow it |

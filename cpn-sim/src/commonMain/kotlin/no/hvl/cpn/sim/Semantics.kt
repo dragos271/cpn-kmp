@@ -6,6 +6,7 @@ import no.hvl.cpn.core.Marking
 import no.hvl.cpn.core.Multiset
 import no.hvl.cpn.core.Net
 import no.hvl.cpn.core.Place
+import no.hvl.cpn.core.TimedMultiset
 import no.hvl.cpn.core.Transition
 import no.hvl.cpn.core.Variable
 
@@ -27,6 +28,10 @@ public class NotEnabledException(
  * ch. 4: a step of binding elements is enabled in a marking if every guard holds and the tokens the
  * step consumes, summed over all its binding elements, are present.
  *
+ * Timed nets (ch. 10, T3.2): tokens on timed places carry integer timestamps, and a step is enabled
+ * at the marking's model time only if the timed tokens it consumes are *available*, timestamp ≤
+ * time. Firing gives produced tokens the timestamp time + the transition's delay + the arc's delay.
+ *
  * Hierarchical nets are flattened first (T1.5).
  */
 public class Semantics(
@@ -44,7 +49,7 @@ public class Semantics(
         arcsByTransition = transitions.associateWith { arcs[it].orEmpty() }
         variablesByTransition =
             transitions.associateWith { t ->
-                t.guard.variables + arcsByTransition.getValue(t).flatMap { it.inscription!!.variables }
+                t.guard.variables + t.delay.variables + arcsByTransition.getValue(t).flatMap { it.inscription!!.variables }
             }
     }
 
@@ -69,11 +74,36 @@ public class Semantics(
         step: List<BindingElement>,
         marking: Marking,
     ): Boolean {
+        val time = enablingTime(step, marking) ?: return false
+        return time <= marking.time
+    }
+
+    /**
+     * The earliest model time, at least the marking's, at which [step] is enabled: the guards hold and
+     * all consumed timed tokens are available. Null if it is not enabled at any time (not enough
+     * tokens, or a guard fails). For untimed nets this is the marking's time or null.
+     */
+    public fun enablingTime(
+        step: List<BindingElement>,
+        marking: Marking,
+    ): Long? {
         require(step.isNotEmpty()) { "A step must contain at least one binding element" }
         step.forEach(::checkBinding)
-        if (!step.all { it.transition.guard.evaluate(it.binding) }) return false
-        return consumed(step).all { (place, tokens) -> tokens subsetOf marking[place] }
+        tellTime(marking)
+        if (!step.all { it.transition.guard.evaluate(it.binding) }) return null
+        var time = marking.time
+        for ((place, tokens) in consumed(step)) {
+            if (!(tokens subsetOf marking[place])) return null
+            if (place.timed) time = maxOf(time, marking.timed(place).earliest(tokens) ?: return null)
+        }
+        return time
     }
+
+    /** [enablingTime] of one binding element. */
+    public fun enablingTime(
+        element: BindingElement,
+        marking: Marking,
+    ): Long? = enablingTime(listOf(element), marking)
 
     /** Fires [element], returning the successor marking. */
     public fun fire(
@@ -87,13 +117,44 @@ public class Semantics(
         marking: Marking,
     ): Marking {
         if (!isEnabled(step, marking)) throw NotEnabledException("Step $step is not enabled in marking\n$marking")
+        val now = marking.time
         val consumed = consumed(step)
         val produced = produced(step)
-        val changes = LinkedHashMap<Place<*>, Multiset<*>>()
+        val timedProduced = if (net.isTimed) producedTimed(step, now) else emptyMap()
+        val changes = LinkedHashMap<Place<*>, Any>()
         for (place in consumed.keys + produced.keys) {
-            changes[place] = (marking[place] - consumed[place].orEmpty()) + produced[place].orEmpty()
+            changes[place] =
+                if (place.timed) {
+                    marking.timed(place).minus(consumed[place].orEmpty(), now) + (timedProduced[place] ?: TimedMultiset.empty())
+                } else {
+                    (marking[place] - consumed[place].orEmpty()) + produced[place].orEmpty()
+                }
         }
         return marking.update(changes)
+    }
+
+    /** What [step] puts on timed places, with timestamps: [now] + the transition's delay + each arc's delay. */
+    private fun producedTimed(
+        step: List<BindingElement>,
+        now: Long,
+    ): Map<Place<Any?>, TimedMultiset<Any?>> {
+        val sum = LinkedHashMap<Place<Any?>, TimedMultiset<Any?>>()
+        for ((transition, binding) in step) {
+            val delay = transition.delay.evaluate(binding)
+            for (arc in arcsByTransition.getValue(transition)) {
+                if (!arc.direction.isOutput || !arc.place.timed) continue
+                @Suppress("UNCHECKED_CAST")
+                val typed = arc as Arc<Any?>
+                val tokens = typed.inscription!!.evaluateTimed(binding).shifted(now + delay)
+                sum[typed.place] = (sum[typed.place] ?: TimedMultiset.empty()) + tokens
+            }
+        }
+        return sum
+    }
+
+    /** Lets inscriptions read the model time ([Net.clock]). */
+    private fun tellTime(marking: Marking) {
+        net.clock?.invoke(marking.time)
     }
 
     /** Tokens removed by [step], per input place. */
@@ -105,6 +166,7 @@ public class Semantics(
      * @throws IllegalStateException if an output arc evaluates to a colour outside its place's colour set.
      */
     public fun produced(step: List<BindingElement>): Map<Place<Any?>, Multiset<Any?>> {
+        // Inscriptions may read the time; isEnabled told it already when called through fire.
         val produced = sumArcs(step) { it.direction.isOutput }
         for ((place, tokens) in produced) {
             val bad = tokens.distinct.filterNot { it in place.colourSet }

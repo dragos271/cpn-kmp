@@ -48,7 +48,7 @@ repositories.
 | Interactive simulation (choose a binding) | ✅ | ? | ❌ mock only | ✅ | |
 | Automatic simulation with a seed | 🟡 random, no seed | ? | ❌ | ✅ | The same trace on every platform |
 | Headless / CLI | 🟡 via Access/CPN | ✅ | ❌ | ✅ | `cpn simulate` |
-| Timed nets | ✅ | ? | 🟡 `time` text field | ❌ | Planned (F7), integer time |
+| Timed nets | ✅ | ? | 🟡 `time` text field | ✅ | Integer time: availability, transition and arc delays, `time()`, clock shown in the app |
 | **Analysis** | | | | | |
 | State space | ✅ | ✅ | ❌ | ❌ | Planned (F8) |
 | Standard state-space report | ✅ | ✅ | ❌ | ❌ | Planned (F8) |

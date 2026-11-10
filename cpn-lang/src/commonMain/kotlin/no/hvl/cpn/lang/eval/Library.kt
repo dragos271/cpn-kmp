@@ -1,6 +1,7 @@
 package no.hvl.cpn.lang.eval
 
 import no.hvl.cpn.core.Multiset
+import no.hvl.cpn.core.TimedMultiset
 import no.hvl.cpn.lang.value.MlCon
 import no.hvl.cpn.lang.value.MlReal
 import no.hvl.cpn.lang.value.MlTuple
@@ -244,7 +245,8 @@ internal object Library {
                 if (count < 0) raise("Fail", "negative coefficient $count in $count`${formatValue(colour)}")
                 if (count == 0) Multiset.empty<Any?>() else Multiset.repeated(colour, count)
             }
-        v["++"] = fn2 { a, b -> toMultiset(a) + toMultiset(b) }
+        v["++"] =
+            fn2 { a, b -> if (a is TimedMultiset<*> || b is TimedMultiset<*>) toTimed(a) + toTimed(b) else toMultiset(a) + toMultiset(b) }
         v["--"] =
             fn2 { a, b ->
                 val x = toMultiset(a)
@@ -288,10 +290,11 @@ internal object Library {
                 ms.distinct.single()
             }
 
-        // -- Time (untimed until T3.2: delays are ignored and the clock stays at 0)
-        v["@+"] = fn2 { value, _ -> value }
-        v["time"] = fn { 0 }
-        v["intTime"] = fn { 0 }
+        // -- Time (T3.2). `x @+ d` is the token x d time units after the occurrence: a TimedMultiset of
+        // delays, which `++` keeps and untimed contexts drop (toMultiset).
+        v["@+"] = fn2 { value, d -> toTimed(value).shifted((d as Number).toLong()) }
+        v["time"] = fn { modelTime(interpreter) }
+        v["intTime"] = fn { modelTime(interpreter) }
 
         // -- Random distributions
         val random = { interpreter.random }
@@ -337,6 +340,18 @@ internal object Library {
     ) = MlTuple(listOf(a, b))
 
     private fun list(value: Any?): List<Any?> = value as List<Any?>
+
+    /** `int` values are Ints (D8): the time as one while it fits. */
+    private fun modelTime(interpreter: Interpreter): Any =
+        interpreter.now.let {
+            if (it in
+                Int.MIN_VALUE..Int.MAX_VALUE
+            ) {
+                it.toInt()
+            } else {
+                it
+            }
+        }
 
     /** [l] without the first element equal to [x]; [l] itself if there is none. */
     private fun removeFirst(

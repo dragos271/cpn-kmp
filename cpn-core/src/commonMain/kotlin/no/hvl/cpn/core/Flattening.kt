@@ -75,7 +75,7 @@ private class Flattener(
         if (problems.isNotEmpty()) throw InvalidNetException(problems)
         for (page in net.primePages) instantiate(page, parent = null, substitution = null)
         val page = Page("flat", net.name, flatPlaces.toList(), flatTransitions.toList(), flatArcs.toList())
-        val flat = Net(net.name, listOf(page), net.variables)
+        val flat = Net(net.name, listOf(page), net.variables, net.clock)
         return FlatNet(flat, net, instances.toList(), placeMap, transitionMap)
     }
 
@@ -108,7 +108,13 @@ private class Flattener(
 
         for (transition in page.transitions) {
             if (transition.isSubstitution) continue
-            val flat = Transition("${instance.qualifiedId}/${transition.id}", qualifiedName(instance, transition.name), transition.guard)
+            val flat =
+                Transition(
+                    "${instance.qualifiedId}/${transition.id}",
+                    qualifiedName(instance, transition.name),
+                    transition.guard,
+                    delay = transition.delay,
+                )
             transitionMap[instance to transition] = flat
             flatTransitions += flat
             for (arc in page.arcsOf(transition)) {
@@ -147,7 +153,15 @@ private class Flattener(
     ): Place<*> {
         @Suppress("UNCHECKED_CAST")
         val typed = place as Place<Any?>
-        val flat = Place("${instance.qualifiedId}/${place.id}", qualifiedName(instance, place.name), typed.colourSet, typed.initialMarking)
+        val flat =
+            Place(
+                "${instance.qualifiedId}/${place.id}",
+                qualifiedName(instance, place.name),
+                typed.colourSet,
+                typed.initialMarking,
+                timed = typed.timed,
+                initialTimedMarking = typed.initialTimedMarking,
+            )
         flatPlaces += flat
         return flat
     }

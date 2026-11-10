@@ -48,7 +48,7 @@ class CpnCommandTest {
         }
         """.trimIndent()
 
-    /** The countdown as CPN Tools saves it (T3.1), with a delay the engine ignores until T3.2. */
+    /** The countdown as CPN Tools saves it (T3.1), with a delay, which has no effect: no colour set is timed. */
     private val cpnTools =
         """
         <?xml version="1.0" encoding="iso-8859-1"?>
@@ -113,8 +113,7 @@ class CpnCommandTest {
         val json = cpn().test("simulate countdown.json --seed 7")
         val cpnFile = cpn().test("simulate countdown.cpn --seed 7")
         assertEquals(0, cpnFile.statusCode, cpnFile.stderr)
-        assertEquals(json.stdout, cpnFile.stdout)
-        assertTrue("note: 1 transition delays (@+) are ignored" in cpnFile.stderr, cpnFile.stderr)
+        assertEquals(json.stdout, cpnFile.stdout, "a delay in an untimed net changes nothing")
     }
 
     @Test

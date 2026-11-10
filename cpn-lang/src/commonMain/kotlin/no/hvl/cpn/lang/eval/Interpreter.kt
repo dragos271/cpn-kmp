@@ -123,6 +123,8 @@ internal class Env(
  */
 public class Interpreter(
     public var random: RandomSource = RandomSource.seeded(0),
+    /** The model time CPN ML's `time()` returns; the simulator sets it before evaluating (T3.2). */
+    public var now: Long = 0,
 ) {
     private var global: Env = Env(Library.values(this), null)
 

@@ -28,8 +28,15 @@ public class Place<T>(
     public val initialMarking: Multiset<T> = Multiset.empty(),
     public val portType: PortType? = null,
     public val fusionSet: String? = null,
+    /** A place of a timed colour set: its tokens carry timestamps (T3.2). */
+    public val timed: Boolean = false,
+    /** For timed places, the initial tokens with their timestamps; [initialMarking] at time 0 if null. */
+    initialTimedMarking: TimedMultiset<T>? = null,
 ) {
     public val isPort: Boolean get() = portType != null
+
+    /** The initial tokens of a timed place with their timestamps. */
+    public val initialTimedMarking: TimedMultiset<T> = initialTimedMarking ?: TimedMultiset.at(initialMarking, 0)
 
     override fun toString(): String = name
 }
@@ -48,6 +55,8 @@ public class Transition(
     public val name: String,
     public val guard: Guard = Guard.TRUE,
     public val substitution: Substitution? = null,
+    /** The time region (`@+9`): added to the timestamps of every token the transition produces (T3.2). */
+    public val delay: Delay = Delay.NONE,
 ) {
     public val isSubstitution: Boolean get() = substitution != null
 
@@ -116,7 +125,15 @@ public class Net(
     public val name: String,
     public val pages: List<Page>,
     public val variables: List<Variable<*>>,
+    /**
+     * Told the model time before inscriptions are evaluated, so they can read it (CPN ML `time()`).
+     * Inscriptions written in Kotlin do not need it.
+     */
+    public val clock: ((Long) -> Unit)? = null,
 ) {
+    /** True if some place is timed: then the simulator keeps a clock and timestamps (T3.2). */
+    public val isTimed: Boolean get() = pages.any { page -> page.places.any { it.timed } }
+
     public val primePages: List<Page>
         get() {
             val subpages = pages.flatMap { page -> page.transitions.mapNotNull { it.substitution?.subpage } }.toSet()

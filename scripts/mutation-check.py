@@ -32,6 +32,10 @@ M_ALL = [
   "if (old != null && positionOf(old) == p) return this", "if (old != null) return this", [":cpn-io:jvmTest"]),
  ("M10 .cpn export writes portsock pairs as (socket, port)", "cpn-io/src/commonMain/kotlin/no/hvl/cpn/io/cpntools/CpnToolsWriter.kt",
   "port?.let { xmlId(it) to xmlId(socket) }", "port?.let { xmlId(socket) to xmlId(it) }", [":cpn-io:jvmTest"]),
+ ("M11 timed tokens count as available before their timestamp", "cpn-sim/src/commonMain/kotlin/no/hvl/cpn/sim/Semantics.kt",
+  "if (place.timed) time = maxOf(time, marking.timed(place).earliest(tokens) ?: return null)", "if (place.timed) marking.timed(place).earliest(tokens) ?: return null", [":cpn-io:jvmTest"]),
+ ("M12 transition delays (time regions) are ignored", "cpn-sim/src/commonMain/kotlin/no/hvl/cpn/sim/Semantics.kt",
+  "val delay = transition.delay.evaluate(binding)", "val delay = 0L", [":cpn-io:jvmTest"]),
 ]
 M = [m for m in M_ALL if only is None or m[0].split()[0] in only]
 results = []

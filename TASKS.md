@@ -87,14 +87,14 @@ The goal is real CPN ML inscriptions, plus a Python-like front-end that shares t
 - **T2.4 Type checker.** Hindley–Milner with SML value restriction, equality types and overloading (`+` on int and real). Error messages should point to the inscription.
   *Done:* types all corpus declarations; golden tests for error messages.
   *Status:* done and used by the app's checks; checking the whole corpus waits for T3.5. Simplifications: `int`
-  stands for intinf and time (D8), and `@+` is typed `'a * int -> 'a` until timed nets (T3.2).
+  stands for intinf and time (D8), and `@+` is typed `'a * int -> 'a` (its timed result is handled at runtime, T3.2).
 - **T2.5 Evaluator.** A tree-walking interpreter: closures, pattern matching, exceptions, and the multiset operators (`++`, `--`, `` ` ``). Include the SML Basis subset that models use (`List`, `String`, `Int`, `Real`, `Option`).
   *Done:* the I1 nets are rebuilt with text inscriptions and give identical traces.
   *Status:* done. Editable documents compile to runnable nets (`CpnDocument.compile`), so the app runs edited
   models and `cpn simulate` runs `cpn-document` files. The JSON example nets rebuilt from their CPN ML text give
   identical traces for several seeds. Colour set ranges and `subset ... by` predicates are evaluated. Arc
   inscriptions that are patterns (``2`(n,d)``, `Data n`) bind variables from tokens. Simplifications: delays
-  (`@+`) are ignored and `time()` is 0 until T3.2; `int` values are Ints and `intinf`/`time` values Longs (D8),
+  (`@+`) were ignored and `time()` was 0 until T3.2 (now supported); `int` values are Ints and `intinf`/`time` values Longs (D8),
   converted when tokens reach a place.
 - **T2.6 Python-like syntax spec.** Write the language definition (a thesis deliverable): grammar, mapping table SML ↔ new syntax, and what is deliberately not supported.
   *Done:* a written spec doc and a reviewed set of examples (e.g. `type Packet = (No, Data)`).
@@ -114,7 +114,7 @@ The goal is to run real CPN Tools models and produce state-space reports.
     [docs/corpus-results.md](docs/corpus-results.md), and the mapping and normalisations in
     [docs/cpn-format.md](docs/cpn-format.md).
   - **Where it's used:** `cpn simulate x.cpn` and the app (desktop and web) open `.cpn` files. What the engine
-    ignores (monitors, priorities, delays until T3.2) is reported as notes. Code segments and inhibitor/reset
+    ignores (monitors, priorities) is reported as notes. Code segments and inhibitor/reset
     arcs are reported as problems.
   - **XML:** a small reader in common code (D7).
   - **Corpus gaps fixed along the way:** standard colour sets declared again, declarations in dependency order,
@@ -154,6 +154,21 @@ The goal is to run real CPN Tools models and produce state-space reports.
   Time is an **integer** (2026-11-09 meeting). A token is available only when its timestamp ≤ the clock, and
   delays can be on transitions and on output arcs (F7).
   *Done:* matches the CPN Tools traces for the timed protocol example.
+  *Status:* done (2026-11-10). **Comparing with real CPN Tools traces is still to do** (it needs CPN Tools, T4.1).
+  - **Core:** `TimedMultiset` (tokens with integer timestamps), timed places, transition delays, and the model time in
+    each `Marking`, so the state space (T3.3) sees it.
+  - **Semantics** (Jensen & Kristensen ch. 10):
+    - a step is enabled only when the timed tokens it consumes are available;
+    - produced tokens get the time + the transition's delay + the arc's delay;
+    - when nothing is enabled now, the clock moves to the earliest time something is.
+  - **CPN ML:** `@+` on arcs and in initial markings (``1`x@+5``), time regions `@+expr` (type-checked as int), and
+    `time()`. Delays do nothing in nets without timed colour sets, as in CPN Tools.
+  - **Output:** the CLI and the app show the model time, and tokens with timestamps (``1`x@5+++1`y@9``).
+  - **Checked by hand against the book:** the textbook timed protocol runs from its `.cpn` file. Send Packet fires at
+    0, Transmit Packet at 9, and the retransmission is due at 109. Over 20 seeds the clock never goes backwards and
+    all data arrives.
+  - **Provisional:** which tokens of one colour are removed when several are available (the latest ones). Check
+    against CPN Tools.
 - **T3.3 State space.** BFS/DFS reachability graph with marking hashing and compact storage, plus limits (nodes, time).
 - **T3.4 SCC + standard report.** Tarjan SCC, home markings, dead markings, dead/live transitions, integer/multiset bounds, and fairness. Output matches the CPN Tools "Standard Report" sections.
 - **T3.5 Model corpus.** Collect `.cpn` models: CPN Tools examples, textbook models and public repos. Record licence and source.
@@ -216,7 +231,7 @@ The meeting notes and where each point is handled:
 | Stable under repeated import/export (important) | T3.1c, F6 | Done: unchanged `.cpn` files come back byte for byte (49/49); 500 random nets and 5-cycle fixed point in CI |
 | Import existing `.cpn` files from the web | T3.5 corpus, T3.1 | Done: 49/49 import, 26/49 run ([results](docs/corpus-results.md)) |
 | Make `.cpn` files from scratch and run them in another CPN tool | T3.1b, F5 | Export done, 5 models in `interop/`; **opening them in CPN Tools is still to do** ([log](docs/interop-log.md)) |
-| Timed nets: token availability, delays, integer time | T3.2, F7 | Not started |
+| Timed nets: token availability, delays, integer time | T3.2, F7 | Done; comparison with CPN Tools traces waits for T4.1 |
 | The report at the end of the earlier work (state-space report) | T3.3, T3.4, F8 | Not started |
 | Document the process, how prompts were used, how AI work is checked, when it is accepted | [ai-process.md](docs/ai-process.md) | Done; kept up to date per task |
 | Play with the green tests | `scripts/mutation-check.py`, ai-process.md §3 | Done: 6 deliberate bugs, 2 survived, tests added |

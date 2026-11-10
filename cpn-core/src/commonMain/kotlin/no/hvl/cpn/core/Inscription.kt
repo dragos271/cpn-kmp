@@ -70,6 +70,12 @@ public interface ArcInscription<T> {
 
     public fun evaluate(binding: Binding): Multiset<T>
 
+    /**
+     * The tokens with their delays (`expr @+ d`), as timestamps relative to the firing. Only used for
+     * timed places; inscriptions without delays need not override it.
+     */
+    public fun evaluateTimed(binding: Binding): TimedMultiset<T> = TimedMultiset.at(evaluate(binding), 0)
+
     /** A closed multiset, e.g. ``1`()``. */
     public class Constant<T>(
         public val value: Multiset<T>,
@@ -162,6 +168,26 @@ public fun <T> Binding.matching(
         value !in variable.colourSet -> null
         else -> with(variable, value)
     }
+
+/** A transition's delay (CPN Tools' time region, `@+expr`): how far in the future its output tokens are. */
+public interface Delay {
+    public val variables: Set<Variable<*>>
+
+    public fun evaluate(binding: Binding): Long
+
+    public companion object {
+        public val NONE: Delay = constant(0)
+
+        public fun constant(delay: Long): Delay =
+            object : Delay {
+                override val variables: Set<Variable<*>> = emptySet()
+
+                override fun evaluate(binding: Binding): Long = delay
+
+                override fun toString(): String = "@+$delay"
+            }
+    }
+}
 
 /** A transition guard: a boolean condition over a binding. */
 public interface Guard {

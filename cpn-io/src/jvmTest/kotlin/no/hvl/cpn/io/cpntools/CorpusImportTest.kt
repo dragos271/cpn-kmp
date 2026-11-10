@@ -67,6 +67,28 @@ class CorpusImportTest {
         )
     }
 
+    @Test
+    fun theTimedProtocolKeepsModelTime() {
+        // Jensen & Kristensen, section 10.1, from the book's own .cpn file.
+        val file = "cpnbook/models/chapter10/10-1TimedProtocol.cpn"
+        val net = ModelFiles.open(File(corpus, file).readBytes(), "TimedProtocol").net!!
+        for (seed in 1L..20L) {
+            val simulator = Simulator(net, seed)
+            val result = simulator.run(10_000)
+            assertEquals(no.hvl.cpn.sim.StopReason.DEAD, result.reason, "seed $seed")
+            val times = simulator.trace.map { it.time!! }
+            assertEquals(times.sorted(), times, "seed $seed: the clock never goes backwards")
+            // Send Packet at 0 puts (1,"COL") on A at 0 + 9, so Transmit Packet is next, at 9.
+            assertEquals("1 @0 TimedProtocol'Send Packet 1 <d=\"COL\",n=1>", simulator.trace[0].toString())
+            assertEquals(9, simulator.trace[1].time, "seed $seed")
+            val received =
+                simulator.flatNet.net.pages
+                    .flatMap { it.places }
+                    .single { it.name.startsWith("TimedProtocol'Data Received") }
+            assertEquals(listOf("COLOURED PETRI  NET"), result.marking[received].distinct.toList(), "seed $seed")
+        }
+    }
+
     private fun tryModel(file: String): Result {
         val model =
             try {

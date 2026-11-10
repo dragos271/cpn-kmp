@@ -146,7 +146,7 @@ class CpnToolsFormatTest {
     @Test
     fun ignoredFeaturesAreNoted() {
         val notes = imported.notes.joinToString("\n")
-        assertTrue("1 transition delays" in notes, notes)
+        assertTrue("delay" !in notes, "delays are supported since T3.2: $notes")
         assertTrue("1 transition priorities are ignored" in notes, notes)
         assertTrue("1 monitors are ignored" in notes, notes)
     }

@@ -46,7 +46,7 @@ public data class TransitionNode(
      * subpage). A socket without an entry is glued to the port with the same name.
      */
     val portAssignments: Map<String, String> = emptyMap(),
-    /** CPN Tools' time region, e.g. `@+9`; empty for none. Ignored until timed nets (T3.2). */
+    /** CPN Tools' time region, e.g. `@+9`: the transition's delay in timed nets (T3.2); empty for none. */
     val time: String = "",
     /** CPN Tools' priority region, e.g. `P_HIGH`; empty for the default. Not used by the simulator yet. */
     val priority: String = "",

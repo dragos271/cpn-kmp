@@ -57,12 +57,34 @@ public class BindingSearch(
         return found.toList()
     }
 
+    /**
+     * The earliest model time after the marking's at which some binding element becomes enabled, or
+     * null if none ever will without other transitions firing (timed nets, T3.2). The clock moves
+     * there when nothing is enabled now.
+     */
+    public fun nextEnablingTime(marking: Marking): Long? {
+        var earliest: Long? = null
+        for (transition in semantics.transitions) {
+            val plan = plans.getValue(transition)
+            val patterns = plan.patterns.sortedBy { (place, _) -> marking[place].distinct.size }
+            matchPatterns(patterns, 0, Binding.EMPTY, marking) { partial ->
+                enumerate(plan.enumerated, 0, partial) { binding ->
+                    val time = semantics.enablingTime(BindingElement(transition, binding), marking)
+                    if (time != null && time > marking.time && (earliest == null || time < earliest!!)) earliest = time
+                }
+            }
+        }
+        return earliest
+    }
+
     /** All enabled binding elements of all transitions in [marking]. */
     public fun enabledBindingElements(marking: Marking): List<BindingElement> =
         semantics.transitions.flatMap { enabledBindings(it, marking) }
 
-    /** True if no transition is enabled in [marking]. */
-    public fun isDead(marking: Marking): Boolean = semantics.transitions.none { enabledBindings(it, marking).isNotEmpty() }
+    /** True if no transition is enabled in [marking], now or (for timed nets) at a later time. */
+    public fun isDead(marking: Marking): Boolean =
+        semantics.transitions.none { enabledBindings(it, marking).isNotEmpty() } &&
+            (!semantics.net.isTimed || nextEnablingTime(marking) == null)
 
     private fun matchPatterns(
         patterns: List<Pair<Place<Any?>, PatternInscription<Any?>>>,

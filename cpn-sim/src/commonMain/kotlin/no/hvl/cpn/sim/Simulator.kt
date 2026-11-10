@@ -6,13 +6,14 @@ import no.hvl.cpn.core.Net
 import no.hvl.cpn.core.Transition
 import no.hvl.cpn.core.flatten
 
-/** One fired binding element; [step] counts from 1. */
+/** One fired binding element; [step] counts from 1. [time] is the model time it fired at, null for untimed nets. */
 public data class Occurrence(
     val step: Int,
     val element: BindingElement,
+    val time: Long? = null,
 ) {
-    /** CPN Tools simulation-report style, e.g. `3 SendPacket <d="COL",n=1>`. */
-    override fun toString(): String = "$step ${element.transition.name} ${element.binding}"
+    /** CPN Tools simulation-report style, e.g. `3 SendPacket <d="COL",n=1>`; timed nets `3 @9 SendPacket ...`. */
+    override fun toString(): String = "$step ${time?.let { "@$it " } ?: ""}${element.transition.name} ${element.binding}"
 }
 
 public enum class StopReason {
@@ -41,7 +42,8 @@ public data class RunResult(
  * platform.
  *
  * Like CPN Tools, each automatic step first picks an enabled transition uniformly at random, then
- * one of its enabled bindings uniformly at random.
+ * one of its enabled bindings uniformly at random. In timed nets, when nothing is enabled at the
+ * current model time the clock first moves to the earliest time something is (T3.2).
  */
 public class Simulator(
     net: Net,
@@ -75,12 +77,41 @@ public class Simulator(
 
     public fun isDead(): Boolean = bindingSearch.isDead(marking)
 
-    /** Fires one randomly chosen enabled binding element; returns null (and changes nothing) if the marking is dead. */
+    /** The model time: 0 for untimed nets. */
+    public val time: Long get() = marking.time
+
+    /**
+     * Fires one randomly chosen enabled binding element; returns null (and changes nothing) if the
+     * marking is dead. In a timed net with nothing enabled now, the clock moves to the earliest time
+     * something is enabled first.
+     */
     public fun step(): Occurrence? {
-        val candidates = semantics.transitions.map { it to bindingSearch.enabledBindings(it, marking) }.filter { it.second.isNotEmpty() }
+        var candidates = candidatesNow()
+        if (candidates.isEmpty() && semantics.net.isTimed) {
+            val next = bindingSearch.nextEnablingTime(marking) ?: return null
+            marking = marking.at(next)
+            candidates = candidatesNow()
+        }
         if (candidates.isEmpty()) return null
         val (_, bindings) = candidates[random.nextInt(candidates.size)]
         return record(bindings[random.nextInt(bindings.size)])
+    }
+
+    private fun candidatesNow() =
+        semantics.transitions
+            .map {
+                it to bindingSearch.enabledBindings(it, marking)
+            }.filter { it.second.isNotEmpty() }
+
+    /**
+     * Moves the clock to the next time something becomes enabled (CPN Tools' "increase model time"
+     * when nothing is enabled); false if nothing ever will be or something is enabled now.
+     */
+    public fun advanceTime(): Boolean {
+        if (enabled().isNotEmpty()) return false
+        val next = bindingSearch.nextEnablingTime(marking) ?: return false
+        marking = marking.at(next)
+        return true
     }
 
     /**
@@ -124,7 +155,8 @@ public class Simulator(
     }
 
     private fun record(element: BindingElement): Occurrence {
+        val time = if (semantics.net.isTimed) marking.time else null
         marking = semantics.fire(element, marking)
-        return Occurrence(history.size + 1, element).also { history += it }
+        return Occurrence(history.size + 1, element, time).also { history += it }
     }
 }
