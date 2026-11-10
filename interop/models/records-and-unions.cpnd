@@ -1,0 +1,26 @@
+{
+  "format": "cpn-document", "version": 1, "name": "RecordsAndUnions",
+  "declarations": "colset ID = index id with 1..2;\ncolset SEQ = int with 1..3;\ncolset MSG = record from : ID * seq : SEQ;\ncolset PKT = union Data : MSG + Ack : ID;\nvar i : ID;\nvar m : MSG;\nfun ackFor (m : MSG) = Ack (#from m);\n",
+  "pages": [{
+    "id": "Main", "name": "RecordsAndUnions",
+    "places": [
+      { "id": "Main.Senders", "name": "Senders", "colset": "ID", "init": "ID.all()", "x": 0, "y": 0 },
+      { "id": "Main.Network", "name": "Network", "colset": "PKT", "init": "", "x": 200, "y": 0 },
+      { "id": "Main.Acks", "name": "Acks", "colset": "PKT", "init": "", "x": 400, "y": 0 },
+      { "id": "Main.Done", "name": "Done", "colset": "ID", "init": "", "x": 600, "y": 0 }
+    ],
+    "transitions": [
+      { "id": "Main.Send", "name": "Send", "guard": "", "x": 100, "y": 0 },
+      { "id": "Main.Receive", "name": "Receive", "guard": "#seq m = 1", "x": 300, "y": 0 },
+      { "id": "Main.Finish", "name": "Finish", "guard": "", "x": 500, "y": 0 }
+    ],
+    "arcs": [
+      { "id": "Main.a1", "place": "Main.Senders", "transition": "Main.Send", "direction": "in", "inscription": "i" },
+      { "id": "Main.a2", "place": "Main.Network", "transition": "Main.Send", "direction": "out", "inscription": "Data {from = i, seq = 1}" },
+      { "id": "Main.a3", "place": "Main.Network", "transition": "Main.Receive", "direction": "in", "inscription": "Data m" },
+      { "id": "Main.a4", "place": "Main.Acks", "transition": "Main.Receive", "direction": "out", "inscription": "ackFor m" },
+      { "id": "Main.a5", "place": "Main.Acks", "transition": "Main.Finish", "direction": "in", "inscription": "Ack i" },
+      { "id": "Main.a6", "place": "Main.Done", "transition": "Main.Finish", "direction": "out", "inscription": "i" }
+    ]
+  }]
+}

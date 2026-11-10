@@ -28,6 +28,10 @@ M_ALL = [
   "-(p[\"y\"]?.toDoubleOrNull() ?: 0.0)", "(p[\"y\"]?.toDoubleOrNull() ?: 0.0)", [":cpn-io:jvmTest"]),
  ("M8 .cpn import reads portsock pairs as (socket, port)", "cpn-io/src/commonMain/kotlin/no/hvl/cpn/io/cpntools/CpnToolsFormat.kt",
   "?.associate { it.groupValues[2] to it.groupValues[1] }", "?.associate { it.groupValues[1] to it.groupValues[2] }", [":cpn-io:jvmTest"]),
+ ("M9 .cpn export does not write moved positions", "cpn-io/src/commonMain/kotlin/no/hvl/cpn/io/cpntools/CpnToolsWriter.kt",
+  "if (old != null && positionOf(old) == p) return this", "if (old != null) return this", [":cpn-io:jvmTest"]),
+ ("M10 .cpn export writes portsock pairs as (socket, port)", "cpn-io/src/commonMain/kotlin/no/hvl/cpn/io/cpntools/CpnToolsWriter.kt",
+  "port?.let { xmlId(it) to xmlId(socket) }", "port?.let { xmlId(socket) to xmlId(it) }", [":cpn-io:jvmTest"]),
 ]
 M = [m for m in M_ALL if only is None or m[0].split()[0] in only]
 results = []

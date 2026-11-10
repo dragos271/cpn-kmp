@@ -127,10 +127,29 @@ The goal is to run real CPN Tools models and produce state-space reports.
 - **T3.1b .cpn export.** Write documents as CPN Tools 4.x XML, including models made from scratch in the app (F5).
   *Done:* exported files have the CPN Tools structure (automated), and five models made from scratch open and run in
   CPN Tools, recorded in `docs/interop-log.md`.
+  *Status:* done as far as our own tests can tell (2026-11-10); **the check in CPN Tools is still to do**, because it
+  needs Windows.
+  - **Where it's used:** `cpn convert model --to cpn -o out.cpn`, and *Export .cpn…* in the app (desktop and web).
+  - **An imported model** is written onto its original XML. Unchanged parts (graphics, monitors, options, binders,
+    declarations) pass through, so an unchanged model comes back **byte for byte**; all 49 corpus models do.
+  - **A model made in the app** becomes a complete CPN Tools 4.0.1 file.
+  - **Models for CPN Tools:** five made from scratch are in `interop/`, with the steps for checking them in
+    [docs/interop-log.md](docs/interop-log.md).
+  - **Found and fixed along the way:** CPN Tools allows `with a | b | timed` (a trailing bar before `timed`), which our
+    parser had read as a constant named `timed`.
 - **T3.1c Round-trip stability (important, 2026-11-09 meeting).** `.cpn` → us → `.cpn`, `.cpn` → JSON → `.cpn`
   and app save → open, repeated for 5 cycles (F6).
   *Done:* in CI for the whole corpus and ≥ 500 random nets, nothing is lost after one cycle and the bytes
   are identical from the second export on. Every normalisation is listed in `docs/cpn-format.md`.
+  *Status:* done with T3.1b. These tests run in CI:
+  - `CorpusRoundTripTest`, on all 49 corpus models:
+    - the XML reader and writer reproduce each file exactly;
+    - an unchanged import exports to the identical bytes;
+    - a generated file imports as the same model;
+    - exporting is a fixed point over 5 cycles.
+  - `CpnToolsWriterTest`, on 500 random nets (pages, hierarchy, fusion, ports, awkward names): the same checks for
+    `.cpn`, plus save → open → save for the app's document format; edits are written and everything else is kept.
+  - `.cpn` → document → `.cpn` is covered by combining the generated-file and document-format tests.
 - **T3.2 Timed nets.** Timed colour sets, `@+` delays, timestamps on tokens, a global clock, and the earliest-time step semantics.
   Time is an **integer** (2026-11-09 meeting). A token is available only when its timestamp ≤ the clock, and
   delays can be on transitions and on output arcs (F7).
@@ -194,9 +213,9 @@ The meeting notes and where each point is handled:
 | Point | Where | Status |
 |---|---|---|
 | Run the earlier tool and compare features (supported / not supported) | [comparison.md](docs/comparison.md) | Matrix done from the theses. Running them needs access: Gjesdal's editor repo is private and Garvik's F# simulator is not public |
-| Stable under repeated import/export (important) | T3.1c, F6 | Not started; JSON documents already round-trip |
+| Stable under repeated import/export (important) | T3.1c, F6 | Done: unchanged `.cpn` files come back byte for byte (49/49); 500 random nets and 5-cycle fixed point in CI |
 | Import existing `.cpn` files from the web | T3.5 corpus, T3.1 | Done: 49/49 import, 26/49 run ([results](docs/corpus-results.md)) |
-| Make `.cpn` files from scratch and run them in another CPN tool | T3.1b, F5 | Not started |
+| Make `.cpn` files from scratch and run them in another CPN tool | T3.1b, F5 | Export done, 5 models in `interop/`; **opening them in CPN Tools is still to do** ([log](docs/interop-log.md)) |
 | Timed nets: token availability, delays, integer time | T3.2, F7 | Not started |
 | The report at the end of the earlier work (state-space report) | T3.3, T3.4, F8 | Not started |
 | Document the process, how prompts were used, how AI work is checked, when it is accepted | [ai-process.md](docs/ai-process.md) | Done; kept up to date per task |

@@ -41,4 +41,19 @@ private object DesktopFileAccess : ModelFileAccess {
         File(path).writeText(text)
         return path
     }
+
+    override suspend fun export(
+        bytes: ByteArray,
+        suggestedName: String,
+    ): String? {
+        val dialog =
+            FileDialog(null as Frame?, "Export for CPN Tools", FileDialog.SAVE).apply {
+                file = suggestedName
+                isVisible = true
+            }
+        val name = dialog.file ?: return null
+        val file = File(dialog.directory, if (name.endsWith(".cpn")) name else "$name.cpn")
+        file.writeBytes(bytes)
+        return file.absolutePath
+    }
 }

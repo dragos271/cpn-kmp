@@ -16,11 +16,12 @@ kotlin {
         compilerOptions.jvmTarget.set(JvmTarget.JVM_17)
     }
     js(IR) {
-        nodejs()
+        // Property tests (e.g. 500 random nets) take longer than Mocha's default 2 s on Node.
+        nodejs { testTask { useMocha { timeout = "60s" } } }
     }
     @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
     wasmJs {
-        nodejs()
+        nodejs { testTask { useMocha { timeout = "60s" } } }
     }
     macosArm64()
     macosX64()

@@ -114,6 +114,8 @@ Results on 2026-11-09:
 | M6 | A guard list `[a, b]` passes if *any* condition holds instead of *all* | **Survived**, so a test was added |
 | M7 | The `.cpn` importer does not flip the y axis (added with T3.1) | Caught |
 | M8 | The `.cpn` importer reads `portsock` pairs the wrong way round (added with T3.1) | Caught |
+| M9 | The `.cpn` exporter does not write moved positions (added with T3.1b) | Caught |
+| M10 | The `.cpn` exporter writes `portsock` pairs the wrong way round (added with T3.1b) | Caught |
 
 M5 and M6 showed real gaps: the whole suite was green with a wrong guard rule. Both now have tests
 in `cpn-lang/.../eval/InscriptionsTest.kt`, and re-running the script reports both as caught. Every
@@ -165,3 +167,6 @@ This list is kept for the thesis's discussion of threats to validity.
 | Real models (corpus) | The importer and engine were too strict for real CPN Tools files: 9 kinds of gap (docs/corpus-results.md). None was visible with the hand-written test models | T3.1 |
 | JS/Wasm build | The importer used JVM-only APIs (`RegexOption.DOT_MATCHES_ALL`, `IntArray.binarySearch`): the JVM tests passed | T3.1 |
 | Test review | Wrong expected values in new tests (a line number; the S-expression form) | T3.1 |
+| Round-trip test (corpus) | The parser read `with a \| b \| timed` as a constant called `timed`, so the colour set was untimed | T3.1b |
+| CLI test (compact XML) | The writer re-indented parsed elements that had no whitespace, so the file changed | T3.1b |
+| Round-trip test (corpus) | Untouched exports changed 17 files: CPN Tools 1.5 ids (`id65`), creation-ordered instances, fusion elements that disagree with place labels | T3.1b |

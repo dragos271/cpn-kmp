@@ -65,7 +65,12 @@ public object ModelFiles {
     ): LoadedModel {
         if (CpnToolsFormat.recognises(text)) {
             val imported = CpnToolsFormat.read(text, name)
-            return LoadedModel(net = imported.document.compile().net, document = imported.document, notes = imported.notes)
+            return LoadedModel(
+                net = imported.document.compile().net,
+                document = imported.document,
+                notes = imported.notes,
+                cpnSource = imported.source,
+            )
         }
         val root =
             try {
@@ -86,6 +91,17 @@ public object ModelFiles {
         bytes: ByteArray,
         name: String = "Untitled",
     ): LoadedModel = open(Xml.decode(bytes), name)
+
+    /**
+     * [document] as a CPN Tools `.cpn` file, as bytes ready to write (T3.1b). If [model] was opened
+     * from a `.cpn` file, everything the document does not hold (graphics, monitors, ...) is kept.
+     *
+     * @throws ModelFormatException if the declarations do not parse.
+     */
+    public fun exportCpn(
+        model: LoadedModel,
+        document: CpnDocument,
+    ): ByteArray = Xml.encode(CpnToolsFormat.write(document, model.cpnSource))
 
     /** The model name for a file: its name without directories and extension. */
     public fun modelName(path: String): String = path.substringAfterLast('/').substringAfterLast('\\').substringBeforeLast('.')

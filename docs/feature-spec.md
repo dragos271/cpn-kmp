@@ -104,7 +104,10 @@ open binders and window positions; we write fixed defaults for these.
   optionally in CPN IDE. Each check is recorded in `docs/interop-log.md` with the tool version, the
   date, what was checked and a screenshot.
 
-**Status: not started.**
+**Status: done, except the manual check.**
+- Export works from `cpn convert` and from the app.
+- The structure checks and the five models made from scratch are tested automatically.
+- Opening the five files in CPN Tools ([interop-log.md](interop-log.md)) is still to do, because it needs Windows.
 
 ## F6 Round-trip stability under repeated import/export (important)
 
@@ -133,8 +136,12 @@ generated nets:
    and markings) and checks 1 and 2 for at least 500 cases per CI run.
 5. **The same in the app.** Opening and saving a model 5 times in the app gives identical files.
 
-**Status: partial.** The app's JSON documents already round-trip (cpn-io tests). `.cpn` round trips
-wait for F4 and F5.
+**Status: done** (T3.1b, T3.1c).
+- All 49 corpus models come back byte for byte when unchanged, and generated files import as the
+  same model.
+- Exporting is a fixed point over 5 cycles.
+- 500 random nets per CI run pass the same checks, and the app's own format passes save → open → save.
+- The normalisations of a *new* file are listed in [cpn-format.md](cpn-format.md#writing).
 
 ## F7 Timed nets
 

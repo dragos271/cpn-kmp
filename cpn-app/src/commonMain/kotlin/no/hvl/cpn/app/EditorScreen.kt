@@ -82,6 +82,7 @@ import no.hvl.cpn.app.canvas.NetCanvas
 import no.hvl.cpn.app.canvas.Tool
 import no.hvl.cpn.app.canvas.Viewport
 import no.hvl.cpn.app.canvas.snap
+import no.hvl.cpn.app.files.cpnFileName
 import no.hvl.cpn.app.files.modelFileAccess
 import no.hvl.cpn.app.files.suggestedFileName
 import no.hvl.cpn.core.ArcDirection
@@ -213,6 +214,29 @@ fun EditorScreen(
                     SavedFormat.RUNNABLE_MODEL -> "Saved to $where"
                     SavedFormat.DOCUMENT -> "Saved to $where as an editable document"
                 }
+        }
+    }
+
+    /** Writes the model as a CPN Tools .cpn file (T3.1b); a model opened from one keeps what the editor does not show. */
+    fun exportCpn() {
+        scope.launch {
+            val current = history.current
+            val bytes =
+                try {
+                    ModelFiles.exportCpn(model, current)
+                } catch (e: Exception) {
+                    message = "Couldn't export: ${e.message}"
+                    return@launch
+                }
+            val where =
+                try {
+                    files.export(bytes, cpnFileName(current.name))
+                } catch (e: Exception) {
+                    message = "Couldn't export: ${e.message}"
+                    return@launch
+                } ?: return@launch
+            message = null
+            notice = "Exported to $where for CPN Tools"
         }
     }
 
@@ -361,6 +385,7 @@ fun EditorScreen(
                 onOpen = { discardingChanges(::open) },
                 onSave = { save(asNewFile = false) },
                 onSaveAs = { save(asNewFile = true) },
+                onExport = ::exportCpn,
                 mode = mode,
                 viewport = viewport,
                 canUndo = history.canUndo,
@@ -554,6 +579,7 @@ private fun TopBar(
     onOpen: () -> Unit,
     onSave: () -> Unit,
     onSaveAs: () -> Unit,
+    onExport: () -> Unit,
     mode: CanvasMode,
     viewport: Viewport,
     canUndo: Boolean,
@@ -583,6 +609,7 @@ private fun TopBar(
                 onOpen,
                 onSave,
                 onSaveAs,
+                onExport,
                 viewport,
                 canUndo,
                 canRedo,
@@ -608,6 +635,7 @@ private fun ToolbarCommands(
     onOpen: () -> Unit,
     onSave: () -> Unit,
     onSaveAs: () -> Unit,
+    onExport: () -> Unit,
     viewport: Viewport,
     canUndo: Boolean,
     canRedo: Boolean,
@@ -625,6 +653,7 @@ private fun ToolbarCommands(
         TextButton(onClick = onOpen) { Text("Open…") }
         TextButton(onClick = onSave) { Text("Save") }
         if (canSaveAs) TextButton(onClick = onSaveAs) { Text("Save as…") }
+        TextButton(onClick = onExport) { Text("Export .cpn…") }
         Spacer(Modifier.width(8.dp))
         TextButton(onClick = onUndo, enabled = canUndo) { Text("Undo") }
         TextButton(onClick = onRedo, enabled = canRedo) { Text("Redo") }

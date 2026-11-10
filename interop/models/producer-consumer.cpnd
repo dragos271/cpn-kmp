@@ -1,0 +1,23 @@
+{
+  "format": "cpn-document", "version": 1, "name": "ProducerConsumer",
+  "declarations": "colset FRUIT = with apple | pear | plum;\ncolset UNIT = unit;\nvar f : FRUIT;\n",
+  "pages": [{
+    "id": "Main", "name": "ProducerConsumer",
+    "places": [
+      { "id": "Main.Free", "name": "Free slots", "colset": "UNIT", "init": "2`()", "x": 200, "y": -120 },
+      { "id": "Main.Buffer", "name": "Buffer", "colset": "FRUIT", "init": "", "x": 200, "y": 0 },
+      { "id": "Main.Eaten", "name": "Eaten", "colset": "FRUIT", "init": "", "x": 400, "y": 0 }
+    ],
+    "transitions": [
+      { "id": "Main.Produce", "name": "Produce", "guard": "", "x": 0, "y": 0 },
+      { "id": "Main.Consume", "name": "Consume", "guard": "f <> plum", "x": 300, "y": 120 }
+    ],
+    "arcs": [
+      { "id": "Main.a1", "place": "Main.Free", "transition": "Main.Produce", "direction": "in", "inscription": "()" },
+      { "id": "Main.a2", "place": "Main.Buffer", "transition": "Main.Produce", "direction": "out", "inscription": "f" },
+      { "id": "Main.a3", "place": "Main.Buffer", "transition": "Main.Consume", "direction": "in", "inscription": "f" },
+      { "id": "Main.a4", "place": "Main.Eaten", "transition": "Main.Consume", "direction": "out", "inscription": "f" },
+      { "id": "Main.a5", "place": "Main.Free", "transition": "Main.Consume", "direction": "out", "inscription": "()" }
+    ]
+  }]
+}

@@ -25,7 +25,36 @@ private object BrowserFileAccess : ModelFileAccess {
         downloadText(suggestedName, text)
         return suggestedName
     }
+
+    override suspend fun export(
+        bytes: ByteArray,
+        suggestedName: String,
+    ): String {
+        // Passed as one character per byte; the page turns the characters back into bytes.
+        downloadBytes(suggestedName, CharArray(bytes.size) { (bytes[it].toInt() and 0xFF).toChar() }.concatToString())
+        return suggestedName
+    }
 }
+
+@OptIn(ExperimentalWasmJsInterop::class)
+@JsFun(
+    """(name, latin1) => {
+        const bytes = new Uint8Array(latin1.length);
+        for (let i = 0; i < latin1.length; i++) bytes[i] = latin1.charCodeAt(i);
+        const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = name;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }""",
+)
+private external fun downloadBytes(
+    name: String,
+    latin1: String,
+)
 
 @OptIn(ExperimentalWasmJsInterop::class)
 @JsFun(

@@ -11,13 +11,14 @@ import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.readByteArray
 import no.hvl.cpn.api.Cpn
 
-/** Root `cpn` command. More subcommands (`check`, `statespace`, `convert`) come in T3.6. [readFile] is replaced in tests. */
+/** Root `cpn` command. More subcommands (`check`, `statespace`) come in T3.6. [readFile] and [writeFile] are replaced in tests. */
 class CpnCommand(
     readFile: (String) -> ByteArray = ::readBytesFile,
+    writeFile: (String, ByteArray) -> Unit = ::writeBytesFile,
 ) : CliktCommand(name = "cpn") {
     init {
         versionOption(Cpn.VERSION, names = setOf("--version", "-V"))
-        subcommands(SimulateCommand(readFile))
+        subcommands(SimulateCommand(readFile), ConvertCommand(readFile, writeFile))
     }
 
     override val invokeWithoutSubcommand: Boolean = true
@@ -33,5 +34,10 @@ class CpnCommand(
 }
 
 internal fun readBytesFile(path: String): ByteArray = SystemFileSystem.source(Path(path)).buffered().use { it.readByteArray() }
+
+internal fun writeBytesFile(
+    path: String,
+    bytes: ByteArray,
+) = SystemFileSystem.sink(Path(path)).buffered().use { it.write(bytes) }
 
 fun main(args: Array<String>) = CpnCommand().main(args)

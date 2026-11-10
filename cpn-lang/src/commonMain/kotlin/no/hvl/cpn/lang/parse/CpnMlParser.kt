@@ -948,7 +948,11 @@ private class Parser(
         val start = peek().span.start
         if (acceptKeyword("with")) {
             val constants = mutableListOf(alphaIdent("an enumeration constant"))
-            while (acceptPunct("|")) constants += alphaIdent("an enumeration constant")
+            while (acceptPunct("|")) {
+                // CPN Tools accepts a trailing bar, `with a | b | timed`: there `timed` is the suffix, not a constant.
+                if (atWord("timed") && peek(1).let { it.kind == TokenKind.EOF || it.text == ";" }) break
+                constants += alphaIdent("an enumeration constant")
+            }
             return node(start, EnumColset(constants))
         }
         val word = if (peek().kind == TokenKind.ALPHA_ID && peek().qualifiers.isEmpty()) peek().text else expected("a colour set")

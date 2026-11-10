@@ -1,4 +1,4 @@
-# CPN Tools `.cpn` files: how they are read
+# CPN Tools `.cpn` files: how they are read and written
 
 The importer is `cpn-io/.../cpntools/CpnToolsFormat.kt` (T3.1). It reads the XML that CPN Tools
 1.5 to 4.x writes (DTD formats 5 and 6) into the editable model (`CpnDocument`), the same model the
@@ -57,3 +57,43 @@ round-trip tests (T3.1c) know what may change on the first import, and nothing e
 support, by name and count. For example: "3 transition priorities are ignored" or "22 monitors
 are ignored". `cpn simulate` prints them to stderr as `note: …`, and the app shows them after
 opening the file. Nothing is dropped silently.
+
+## Writing
+
+The writer is `CpnToolsWriter.kt` (T3.1b), used by `ModelFiles.exportCpn`, `cpn convert --to cpn` and
+the app's *Export .cpn…*.
+
+### A model that came from a `.cpn` file
+
+The writer starts from the file's own XML, kept as `LoadedModel.cpnSource`. For every page, place,
+transition and arc the document still has, it writes the document's values (name, position,
+inscriptions, hierarchy, direction) onto the original element. Everything the document does not
+hold stays as it was: graphics, monitors, options, binders, `IndexNode`, and every start tag's
+formatting.
+
+- Elements that were deleted are removed.
+- New elements are written in the shape CPN Tools 4.0.1 uses.
+- Declarations, fusion sets and instances are written again only if the document changed them.
+  Otherwise the file's own elements stay, even where they disagree with each other (the NatCPN
+  models have `<fusion>` elements that differ from the places' fusion labels).
+
+**An unchanged model is written back byte for byte**; all 49 corpus models are, which is tested.
+
+### A model made in the app
+
+The writer generates a complete CPN Tools 4.0.1 file: the generator element, the `globbox`, pages,
+fusion sets, instances, CPN Tools' default options, one binder showing each top page, and an empty
+`monitorblock`. A comment in the prolog says the file was written by cpn-kmp.
+
+### Normalisations of a new file
+
+Importing a generated file gives the same model back, except for:
+
+| What | Change |
+|---|---|
+| Ids not in CPN Tools' style (`Top`, `Page1.place3` from the app) | Replaced by fresh `ID…` ids, consistently |
+| Coordinates | Six decimals, as CPN Tools writes them |
+| Declarations | One element each. Blank lines between declarations are not kept, and a `;` is added between declarations that had none. The parsed declarations are identical (tested) |
+| Sockets glued to ports by name | Written as explicit `portsock` pairs, so they come back explicit |
+| Graphics | CPN Tools defaults (sizes, colours, label offsets) |
+| Characters outside ISO-8859-1 | Written as character references (`&#8364;`) and read back as the character |

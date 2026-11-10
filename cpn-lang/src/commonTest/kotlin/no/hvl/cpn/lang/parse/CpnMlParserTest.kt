@@ -1,6 +1,8 @@
 package no.hvl.cpn.lang.parse
 
+import no.hvl.cpn.lang.ast.ColsetDecl
 import no.hvl.cpn.lang.ast.Declarations
+import no.hvl.cpn.lang.ast.EnumColset
 import no.hvl.cpn.lang.ast.IfExpr
 import no.hvl.cpn.lang.ast.InfixExpr
 import no.hvl.cpn.lang.ast.SourceText
@@ -201,6 +203,16 @@ class CpnMlParserTest {
         parser.parseDeclarations(SourceText("d", "infixr 2 &&&; nonfix ++"))
         assertTrue(parser.fixities.isInfix("&&&"))
         assertEquals("(app (app (id ++) (id a)) (id b))", parser.parseExpression(SourceText("e", "++ a b")).toSExpr())
+    }
+
+    @Test
+    fun enumerationsMayEndWithABarBeforeTimed() {
+        // As in the NatCPN models: CPN Tools reads this as a timed colour set with two constants.
+        val decl = parseCpnMl("colset MODE = with idle | busy | timed;").declarations.single() as ColsetDecl
+        assertEquals(listOf("idle", "busy"), (decl.spec as EnumColset).constants.map { it.name })
+        assertTrue(decl.timed)
+        val plain = parseCpnMl("colset T = with a | timed;").declarations.single() as ColsetDecl
+        assertEquals(listOf("a"), (plain.spec as EnumColset).constants.map { it.name })
     }
 
     @Test

@@ -57,14 +57,32 @@ public object CpnToolsFormat {
             } catch (e: XmlException) {
                 throw ModelFormatException("", "not valid XML: ${e.message}")
             }
-        if (xml.root.name !=
-            "workspaceElements"
-        ) {
+        return fromXml(xml, name)
+    }
+
+    /** [read] for a file already parsed. */
+    public fun fromXml(
+        xml: XmlDocument,
+        name: String,
+    ): ImportedModel {
+        if (xml.root.name != "workspaceElements") {
             throw ModelFormatException("", "expected a CPN Tools file (<workspaceElements>), found <${xml.root.name}>")
         }
         val net = xml.root.child("cpnet") ?: throw ModelFormatException("workspaceElements", "no <cpnet> element")
         return CpnToolsReader(net, name).read(xml)
     }
+
+    /**
+     * [document] as a CPN Tools 4 file (T3.1b). With [source], the file it was imported from, only
+     * what the document changed is written and everything else (graphics, monitors, GUI state) is
+     * kept; an unchanged document gives back the same bytes. Without it, a new file is generated.
+     *
+     * @throws ModelFormatException if the declarations do not parse: they must be split into CPN Tools' declaration elements.
+     */
+    public fun write(
+        document: CpnDocument,
+        source: XmlDocument? = null,
+    ): String = CpnToolsWriter(document, source).write()
 }
 
 /** An ML comment `(* ... *)`, across lines; `[\s\S]` because `.` does not match newlines on every platform. */
@@ -174,7 +192,9 @@ private class CpnToolsReader(
         val rest = layout.substring(end)
         val restComments = COMMENT.findAll(rest).joinToString(" ") { it.value }
         val stray = COMMENT.replace(rest, "").trim()
-        if (stray.isNotEmpty()) notes += "Text '${stray.take(40)}' after the declaration of $name is ignored, as in CPN Tools"
+        // Only comments after the `;`: kept exactly as written.
+        if (stray.isEmpty()) return layout
+        notes += "Text '${stray.take(40)}' after the declaration of $name is ignored, as in CPN Tools"
         return (layout.substring(0, end) + if (restComments.isEmpty()) "" else " $restComments").trimEnd()
     }
 
@@ -250,14 +270,27 @@ private class CpnToolsReader(
                     }.filter { it != i }
                     .toSet()
             }
-        val placed = BooleanArray(items.size)
+        // Declarations that use each other (or seem to: names are found by text) form a group kept in
+        // the file's order. If every other dependency already points backwards the order is kept, so
+        // sorting declarations that are already sorted changes nothing (the round trips need that).
+        val group = stronglyConnected(after)
+        if (items.indices.all { i -> after[i].all { d -> d < i || group[d] == group[i] } }) return items
+        val members = items.indices.groupBy { group[it] }
+        val dependsOn = members.mapValues { (_, m) -> m.flatMap { after[it] }.map { group[it] }.toSet() - group[m.first()] }
+        val placed = mutableSetOf<Int>()
         val order = mutableListOf<Int>()
         while (order.size < items.size) {
+            // The group that can go next and comes first in the file.
             val next =
-                items.indices.firstOrNull { !placed[it] && after[it].all { d -> placed[d] } }
-                    ?: items.indices.first { !placed[it] } // a cycle: keep the file's order
-            placed[next] = true
-            order += next
+                members.keys
+                    .filter {
+                        it !in placed &&
+                            dependsOn.getValue(it).all { d ->
+                                d in placed
+                            }
+                    }.minBy { members.getValue(it).min() }
+            placed += next
+            order += members.getValue(next).sorted()
         }
         if (order !=
             items.indices.toList()
@@ -265,6 +298,43 @@ private class CpnToolsReader(
             notes += "Declarations were reordered so each comes after the ones it uses, as CPN Tools allows"
         }
         return order.map { items[it] }
+    }
+
+    /** Tarjan's algorithm: for each node of the graph [edges] (node to the nodes it uses), the number of its component. */
+    private fun stronglyConnected(edges: List<Set<Int>>): IntArray {
+        val index = IntArray(edges.size) { -1 }
+        val low = IntArray(edges.size)
+        val component = IntArray(edges.size) { -1 }
+        val stack = ArrayDeque<Int>()
+        val onStack = BooleanArray(edges.size)
+        var counter = 0
+        var components = 0
+
+        fun visit(v: Int) {
+            index[v] = counter
+            low[v] = counter++
+            stack.addLast(v)
+            onStack[v] = true
+            for (w in edges[v]) {
+                if (index[w] < 0) {
+                    visit(w)
+                    low[v] = minOf(low[v], low[w])
+                } else if (onStack[w]) {
+                    low[v] = minOf(low[v], index[w])
+                }
+            }
+            if (low[v] == index[v]) {
+                while (true) {
+                    val w = stack.removeLast()
+                    onStack[w] = false
+                    component[w] = components
+                    if (w == v) break
+                }
+                components++
+            }
+        }
+        for (v in edges.indices) if (index[v] < 0) visit(v)
+        return component
     }
 
     private fun colourSet(e: XmlElement): String {
@@ -426,7 +496,8 @@ private class CpnToolsReader(
 
     private fun position(e: XmlElement): Point {
         val p = e.child("posattr") ?: return Point(0.0, 0.0)
-        return Point(p["x"]?.toDoubleOrNull() ?: 0.0, -(p["y"]?.toDoubleOrNull() ?: 0.0))
+        // 0.0 - y, not -y: y = 0 must give 0.0, not -0.0, which Point equality tells apart.
+        return Point(p["x"]?.toDoubleOrNull() ?: 0.0, 0.0 - (p["y"]?.toDoubleOrNull() ?: 0.0))
     }
 
     private fun XmlElement.requireId(): String = this["id"] ?: throw ModelFormatException(name, "<$name> without an id (line $line)")

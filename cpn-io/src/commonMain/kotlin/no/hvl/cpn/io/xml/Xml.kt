@@ -1,11 +1,12 @@
 package no.hvl.cpn.io.xml
 
 /*
- * A small XML reader in common code (decision D7), enough for CPN Tools files: elements, attributes,
- * text, CDATA, comments, processing instructions and a DOCTYPE (kept as text, never fetched). It keeps
- * whitespace and the order of attributes and children, so a file can be written back as it was read
- * (T3.1b, T3.1c). Character and the five predefined entity references are decoded; DTD-declared
- * entities are not supported (CPN Tools does not write them).
+ * A small XML reader and writer in common code (decision D7), enough for CPN Tools files: elements,
+ * attributes, text, CDATA, comments, processing instructions and a DOCTYPE (kept as text, never
+ * fetched). It keeps whitespace, the order of attributes and children, and each start tag as written,
+ * so an unchanged file is written back byte for byte (T3.1b, T3.1c). Character and the five
+ * predefined entity references are decoded; DTD-declared entities are not supported (CPN Tools does
+ * not write them).
  */
 
 public sealed interface XmlNode
@@ -25,6 +26,10 @@ public data class XmlElement(
     val children: List<XmlNode> = emptyList(),
     /** Where the start tag is in the file, 1-based. */
     val line: Int = 0,
+    /** Written as `<x/>` when it has no children; false for `<x></x>` in the file. */
+    val selfClosing: Boolean = true,
+    /** The start tag as it was in the file, reused by [Xml.write] while name and attributes are unchanged. */
+    val rawStart: RawStartTag? = null,
 ) : XmlNode {
     public operator fun get(attribute: String): String? = attributes.firstOrNull { it.first == attribute }?.second
 
@@ -55,10 +60,18 @@ public data class XmlElement(
     }
 }
 
-/** A parsed file: what comes before the root element (XML declaration, DOCTYPE, comments) as raw text, and the root. */
+/** A start tag as written, without its closing `>` or `/>`: kept so line breaks between attributes survive. */
+public data class RawStartTag(
+    val text: String,
+    val name: String,
+    val attributes: List<Pair<String, String>>,
+)
+
+/** A parsed file: what comes before the root element (XML declaration, DOCTYPE, comments), the root, and what follows it. */
 public data class XmlDocument(
     val prolog: String,
     val root: XmlElement,
+    val epilog: String = "\n",
 )
 
 public class XmlException(
@@ -69,6 +82,104 @@ public class XmlException(
 
 public object Xml {
     public fun parse(text: String): XmlDocument = XmlParser(text).document()
+
+    /**
+     * [document] as text. Unchanged start tags are written as they were read; text escapes all five
+     * predefined entities, as CPN Tools does. Elements built in code (not parsed) are indented two
+     * spaces per level; parsed ones keep their whitespace as it was.
+     */
+    public fun write(document: XmlDocument): String =
+        buildString {
+            append(document.prolog)
+            writeElement(document.root, 0)
+            append(document.epilog)
+        }
+
+    /**
+     * [xml] (as from [write]) as bytes in the encoding its declaration names. For ISO-8859-1, what CPN
+     * Tools writes, characters it cannot hold become character references (`&#8364;`), which every XML
+     * reader turns back into the character.
+     */
+    public fun encode(xml: String): ByteArray {
+        val latin1 =
+            Regex(
+                """^<\?xml[^>]*encoding\s*=\s*["'](iso-8859-1|latin1|latin-1)["']""",
+                RegexOption.IGNORE_CASE,
+            ).containsMatchIn(xml)
+        if (!latin1) return xml.encodeToByteArray()
+        val out = ArrayList<Byte>(xml.length)
+        var i = 0
+        while (i < xml.length) {
+            val c = xml[i]
+            if (c.code < 0x100) {
+                out += c.code.toByte()
+            } else {
+                val code =
+                    if (c.isHighSurrogate() &&
+                        i + 1 < xml.length
+                    ) {
+                        0x10000 + ((c.code - 0xD800) shl 10) + (xml[++i].code - 0xDC00)
+                    } else {
+                        c.code
+                    }
+                "&#$code;".forEach { out += it.code.toByte() }
+            }
+            i++
+        }
+        return out.toByteArray()
+    }
+
+    private fun StringBuilder.writeElement(
+        e: XmlElement,
+        depth: Int,
+    ) {
+        val raw = e.rawStart
+        if (raw != null && raw.name == e.name && raw.attributes == e.attributes) {
+            append(raw.text)
+        } else {
+            append('<').append(e.name)
+            for ((name, value) in e.attributes) {
+                append(' ')
+                    .append(name)
+                    .append("=\"")
+                    .append(escape(value))
+                    .append('"')
+            }
+        }
+        if (e.children.isEmpty() && e.selfClosing) {
+            append("/>")
+            return
+        }
+        append('>')
+        // Built in code: indent the children. Parsed: their whitespace (or its absence) is part of the children.
+        val indent = e.rawStart == null && e.children.isNotEmpty() && e.children.none { it is XmlText }
+        for (child in e.children) {
+            if (indent) append('\n').append("  ".repeat(depth + 1))
+            when (child) {
+                is XmlElement -> writeElement(child, depth + 1)
+                is XmlText -> if (child.cdata) append("<![CDATA[").append(child.text).append("]]>") else append(escape(child.text))
+                is XmlComment -> append("<!--").append(child.text).append("-->")
+            }
+        }
+        if (indent) append('\n').append("  ".repeat(depth))
+        append("</").append(e.name).append('>')
+    }
+
+    private fun escape(text: String): String {
+        if (text.none { it in "&<>\"'" }) return text
+        val out = StringBuilder(text.length + 16)
+        for (c in text) {
+            when (c) {
+                '&' -> out.append("&amp;")
+                '<' -> out.append("&lt;")
+                '>' -> out.append("&gt;")
+                '"' -> out.append("&quot;")
+                '\'' -> out.append("&apos;")
+                else -> out.append(c)
+            }
+        }
+        return out.toString()
+    }
 
     /**
      * [bytes] decoded by the encoding in the XML declaration: ISO-8859-1 (what CPN Tools writes) or
@@ -114,6 +225,7 @@ private class XmlParser(
         }
         val prolog = s.substring(prologStart, i)
         val root = element()
+        val epilogStart = i
         while (true) {
             skipWhitespace()
             when {
@@ -123,22 +235,26 @@ private class XmlParser(
                 else -> fail("content after the root element")
             }
         }
-        return XmlDocument(prolog, root)
+        return XmlDocument(prolog, root, s.substring(epilogStart))
     }
 
     private fun element(): XmlElement {
         val line = lineAt(i)
+        val start = i
         expect('<')
         val name = name()
         val attributes = mutableListOf<Pair<String, String>>()
+        var rawStart: RawStartTag? = null
         while (true) {
             skipWhitespace()
             when {
                 s.startsWith("/>", i) -> {
+                    val raw = RawStartTag(s.substring(start, i), name, attributes.toList())
                     i += 2
-                    return XmlElement(name, attributes, emptyList(), line)
+                    return XmlElement(name, attributes, emptyList(), line, selfClosing = true, rawStart = raw)
                 }
                 s.startsWith(">", i) -> {
+                    rawStart = RawStartTag(s.substring(start, i), name, attributes.toList())
                     i++
                     break
                 }
@@ -168,7 +284,7 @@ private class XmlParser(
                     if (closing != name) fail("</$closing> closes <$name> from line $line")
                     skipWhitespace()
                     expect('>')
-                    return XmlElement(name, attributes, children, line)
+                    return XmlElement(name, attributes, children, line, selfClosing = false, rawStart = rawStart)
                 }
                 s.startsWith("<!--", i) -> {
                     val end = s.indexOf("-->", i + 4).takeIf { it >= 0 } ?: fail("unterminated comment")

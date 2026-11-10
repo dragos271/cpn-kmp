@@ -79,7 +79,14 @@ class CpnCommandTest {
             "broken.json" to """{"name": "X", "pages": []}""",
         )
 
-    private fun cpn() = CpnCommand(readFile = { (files[it] ?: throw NoSuchElementException("no such file")).encodeToByteArray() })
+    /** Files written by `cpn convert`, which later commands can read. */
+    private val written = mutableMapOf<String, ByteArray>()
+
+    private fun cpn() =
+        CpnCommand(
+            readFile = { written[it] ?: (files[it] ?: throw NoSuchElementException("no such file")).encodeToByteArray() },
+            writeFile = { path, bytes -> written[path] = bytes },
+        )
 
     @Test
     fun printsBannerWithoutSubcommand() {
@@ -108,6 +115,24 @@ class CpnCommandTest {
         assertEquals(0, cpnFile.statusCode, cpnFile.stderr)
         assertEquals(json.stdout, cpnFile.stdout)
         assertTrue("note: 1 transition delays (@+) are ignored" in cpnFile.stderr, cpnFile.stderr)
+    }
+
+    @Test
+    fun convertsAnEditableDocumentToACpnFileThatRunsTheSame() {
+        val result = cpn().test("convert countdown.cpnd --to cpn -o out.cpn")
+        assertEquals(0, result.statusCode, result.stderr)
+        assertTrue(written.getValue("out.cpn").decodeToString().contains("<workspaceElements>"))
+        val document = cpn().test("simulate countdown.cpnd --seed 7")
+        val cpnFile = cpn().test("simulate out.cpn --seed 7")
+        assertEquals(0, cpnFile.statusCode, cpnFile.stderr)
+        assertEquals(document.stdout, cpnFile.stdout)
+    }
+
+    @Test
+    fun convertingAnUnchangedCpnFileGivesItBack() {
+        val result = cpn().test("convert countdown.cpn --to cpn")
+        assertEquals(0, result.statusCode, result.stderr)
+        assertEquals(cpnTools, result.stdout)
     }
 
     @Test

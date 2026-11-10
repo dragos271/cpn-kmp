@@ -23,9 +23,18 @@ interface ModelFileAccess {
         suggestedName: String,
         target: String?,
     ): String?
+
+    /** Writes [bytes] (a .cpn file) where the user chooses, starting from [suggestedName]; where it went, or null if cancelled. */
+    suspend fun export(
+        bytes: ByteArray,
+        suggestedName: String,
+    ): String?
 }
 
 expect fun modelFileAccess(): ModelFileAccess
+
+/** A .cpn file name from a model name: `Simple protocol` becomes `Simple protocol.cpn`. */
+fun cpnFileName(modelName: String): String = suggestedFileName(modelName).removeSuffix(".json").removeSuffix(".cpn") + ".cpn"
 
 /** A file name from a model name: `Simple protocol` becomes `Simple protocol.json`. */
 fun suggestedFileName(modelName: String): String {

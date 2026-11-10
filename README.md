@@ -38,6 +38,7 @@ Targets: JVM 17+, JS (Node), Wasm (Node), macOS arm64/x64, Linux x64, Windows x6
 cpn-cli/build/install/cpn-jvm/bin/cpn simulate examples/simple-protocol.json --seed 2026 -n 25
 cpn-cli/build/install/cpn-jvm/bin/cpn simulate examples/simple-protocol.json --format json --no-trace
 cpn-cli/build/install/cpn-jvm/bin/cpn simulate corpus/cpnbook/models/chapter2/2-1DeterministicProtocol.cpn --seed 1
+cpn-cli/build/install/cpn-jvm/bin/cpn convert interop/models/hierarchical.cpnd --to cpn -o hierarchical.cpn   # for CPN Tools
 ```
 
 ### The app (desktop and web)

@@ -1,0 +1,13 @@
+{
+  "format": "cpn-document", "version": 1, "name": "Countdown",
+  "declarations": "colset N = int with 0..5;\nvar n : N;\n",
+  "pages": [{
+    "id": "Main", "name": "Countdown",
+    "places": [{ "id": "Main.P", "name": "Counter", "colset": "N", "init": "1`5", "x": 0, "y": 0 }],
+    "transitions": [{ "id": "Main.Dec", "name": "Decrement", "guard": "n > 0", "x": 180, "y": 0 }],
+    "arcs": [
+      { "id": "Main.a1", "place": "Main.P", "transition": "Main.Dec", "direction": "in", "inscription": "n", "bends": [[90, -40]] },
+      { "id": "Main.a2", "place": "Main.P", "transition": "Main.Dec", "direction": "out", "inscription": "n - 1", "bends": [[90, 40]] }
+    ]
+  }]
+}
