@@ -112,6 +112,8 @@ Results on 2026-11-09:
 | M4 | The simulator always fires the first binding instead of a random one | Caught |
 | M5 | Integer tokens are not converted for `intinf` and `time` places | **Survived**, so a test was added |
 | M6 | A guard list `[a, b]` passes if *any* condition holds instead of *all* | **Survived**, so a test was added |
+| M7 | The `.cpn` importer does not flip the y axis (added with T3.1) | Caught |
+| M8 | The `.cpn` importer reads `portsock` pairs the wrong way round (added with T3.1) | Caught |
 
 M5 and M6 showed real gaps: the whole suite was green with a wrong guard rule. Both now have tests
 in `cpn-lang/.../eval/InscriptionsTest.kt`, and re-running the script reports both as caught. Every
@@ -160,3 +162,6 @@ This list is kept for the thesis's discussion of threats to validity.
 | Test review | Wrong expected values in tests | T2.5 |
 | Mutation check | Guard lists accepted *any* instead of *all*: no test covered it (the code was right) | 2026-11-09 |
 | Mutation check | No test for `intinf` token conversion | 2026-11-09 |
+| Real models (corpus) | The importer and engine were too strict for real CPN Tools files: 9 kinds of gap (docs/corpus-results.md). None was visible with the hand-written test models | T3.1 |
+| JS/Wasm build | The importer used JVM-only APIs (`RegexOption.DOT_MATCHES_ALL`, `IntArray.binarySearch`): the JVM tests passed | T3.1 |
+| Test review | Wrong expected values in new tests (a line number; the S-expression form) | T3.1 |

@@ -109,6 +109,21 @@ The goal is to run real CPN Tools models and produce state-space reports.
 
 - **T3.1 .cpn importer.** Parse CPN Tools XML: pages, places, transitions, arcs, inscriptions, the declaration blocks (`globbox`), hierarchy (`subst`, port/socket, fusion), and initial markings.
   *Done:* imports the CPN Tools example models into `cpn-core`.
+  *Status:* done (2026-11-10).
+  - **Import:** all 49 corpus models import into the editable model; **26 of them run**. The details are in
+    [docs/corpus-results.md](docs/corpus-results.md), and the mapping and normalisations in
+    [docs/cpn-format.md](docs/cpn-format.md).
+  - **Where it's used:** `cpn simulate x.cpn` and the app (desktop and web) open `.cpn` files. What the engine
+    ignores (monitors, priorities, delays until T3.2) is reported as notes. Code segments and inhibitor/reset
+    arcs are reported as problems.
+  - **XML:** a small reader in common code (D7).
+  - **Corpus gaps fixed along the way:** standard colour sets declared again, declarations in dependency order,
+    unbracketed guard lists, `x::xs` and summed patterns, I/O sockets with two arcs, CPN Tools' list library.
+  - **Biggest remaining gap:** in CPN Tools `'a ms` *is* `'a list` (9 models). That is T2.10.
+- **T2.10 CPN Tools language compatibility (from T3.1).** Treat multisets as lists the way CPN Tools does, add
+  colour set `mult` and `sort_ms`, and decide on `real` equality and per-declaration checking (an unused broken
+  declaration does not block a model in CPN Tools).
+  *Done:* the corresponding corpus models in docs/corpus-results.md run.
 - **T3.1b .cpn export.** Write documents as CPN Tools 4.x XML, including models made from scratch in the app (F5).
   *Done:* exported files have the CPN Tools structure (automated), and five models made from scratch open and run in
   CPN Tools, recorded in `docs/interop-log.md`.
@@ -166,7 +181,8 @@ Runs alongside the iterations. The engine stays headless; the app only uses `cpn
   inscriptions and declarations with live syntax and type errors (T2.2, T2.4, T2.9); undo / redo.
   Executing edited CPN ML inscriptions needs T2.5.
   *Status:* done; syntax, colour-set and type errors are live (T2.2, T2.3, T2.4), and edited models run (T2.5).
-- **A6 Open and save.** Desktop file dialogs; web upload / download. Open `.cpn` files once T3.1 exists.
+- **A6 Open and save.** Desktop file dialogs; web upload / download. Open `.cpn` files once T3.1 exists (done: a `.cpn`
+  file is never overwritten by Save, because Save asks where to write until export, T3.1b, exists).
   *Status:* done for JSON models and the editable document format; `.cpn` waits for T3.1.
 - **A7 State-space view.** After T3.4: the standard report and an explorable state graph.
 - **A8 Distribution.** Desktop installers (dmg / msi / deb) and the web build published from CI (e.g. GitHub Pages).
@@ -179,7 +195,7 @@ The meeting notes and where each point is handled:
 |---|---|---|
 | Run the earlier tool and compare features (supported / not supported) | [comparison.md](docs/comparison.md) | Matrix done from the theses. Running them needs access: Gjesdal's editor repo is private and Garvik's F# simulator is not public |
 | Stable under repeated import/export (important) | T3.1c, F6 | Not started; JSON documents already round-trip |
-| Import existing `.cpn` files from the web | T3.5 corpus, T3.1 | Corpus done (49 models); importer next |
+| Import existing `.cpn` files from the web | T3.5 corpus, T3.1 | Done: 49/49 import, 26/49 run ([results](docs/corpus-results.md)) |
 | Make `.cpn` files from scratch and run them in another CPN tool | T3.1b, F5 | Not started |
 | Timed nets: token availability, delays, integer time | T3.2, F7 | Not started |
 | The report at the end of the earlier work (state-space report) | T3.3, T3.4, F8 | Not started |

@@ -63,6 +63,29 @@ internal object Library {
         // -- General
         v["^"] = fn2 { a, b -> (a as String) + (b as String) }
         v["@"] = fn2 { a, b -> list(a) + list(b) }
+
+        // -- CPN Tools list functions (provisional semantics, to be checked against CPN Tools in T4.2)
+        v["^^"] = fn2 { a, b -> list(a) + list(b) }
+        v["mem"] = curried { l, x -> list(l).any { valuesEqual(it, x) } }
+        v["rm"] = curried { x, l -> removeFirst(list(l), x) }
+        v["rmall"] = curried { x, l -> list(l).filterNot { valuesEqual(it, x) } }
+        v["ins"] = curried { l, x -> list(l) + listOf(x) }
+        v["ins_new"] = curried { l, x -> if (list(l).any { valuesEqual(it, x) }) list(l) else list(l) + listOf(x) }
+        v["union"] = curried { a, b -> list(a) + list(b) }
+        v["listsub"] = curried { a, b -> list(b).fold(list(a)) { acc, x -> removeFirst(acc, x) } }
+        v["intersect"] =
+            curried { a, b ->
+                var rest = list(b)
+                list(a).filter { x -> rest.any { valuesEqual(it, x) }.also { if (it) rest = removeFirst(rest, x) } }
+            }
+        v["remdupl"] =
+            fn { l -> list(l).fold(emptyList<Any?>()) { acc, x -> if (acc.any { valuesEqual(it, x) }) acc else acc + listOf(x) } }
+        v["contains"] =
+            curried { a, b ->
+                var rest = list(a)
+                list(b).all { x -> rest.any { valuesEqual(it, x) }.also { if (it) rest = removeFirst(rest, x) } }
+            }
+        v["contains_all"] = curried { a, b -> list(b).all { x -> list(a).any { valuesEqual(it, x) } } }
         v["not"] = fn { !(it as Boolean) }
         v["o"] = fn2 { f, g -> fn { x -> interpreter.call(f, interpreter.call(g, x)) } }
         v["before"] = fn2 { a, _ -> a }
@@ -156,6 +179,17 @@ internal object Library {
         v["String.explode"] = explode
         v["String.implode"] = implode
         v["String.isPrefix"] = curried { prefix, s -> (s as String).startsWith(prefix as String) }
+        v["String.isSuffix"] = curried { suffix, s -> (s as String).endsWith(suffix as String) }
+        v["String.isSubstring"] = curried { part, s -> (part as String) in (s as String) }
+        // D8: intinf is typed as int; its values are Longs, which these convert.
+        v["IntInf.toInt"] =
+            fn {
+                val n = (it as Number).toLong()
+                if (n !in Int.MIN_VALUE..Int.MAX_VALUE) raise("Overflow")
+                n.toInt()
+            }
+        v["IntInf.fromInt"] = fn { (it as Number).toLong() }
+        v["IntInf.toString"] = fn { (it as Number).toLong().let { n -> if (n < 0) "~${-n}" else n.toString() } }
         v["Char.ord"] = ord
         v["Char.chr"] = chr
         v["Char.toString"] = fn { (it as Char).toString() }
@@ -245,6 +279,8 @@ internal object Library {
             }
         v["filter"] = curried { p, ms -> toMultiset(ms).filter { interpreter.call(p, it) as Boolean } }
         v["ext_col"] = curried { f, ms -> toMultiset(ms).map { interpreter.call(f, it) } }
+        v["list_to_ms"] = fn { l -> list(l).fold(Multiset.empty<Any?>()) { ms, x -> ms + Multiset.repeated(x, 1) } }
+        v["ms_to_list"] = fn { ms -> toMultiset(ms).entries().flatMap { (colour, n) -> List(n) { colour } } }
         v["ms_to_col"] =
             fn {
                 val ms = toMultiset(it)
@@ -301,6 +337,15 @@ internal object Library {
     ) = MlTuple(listOf(a, b))
 
     private fun list(value: Any?): List<Any?> = value as List<Any?>
+
+    /** [l] without the first element equal to [x]; [l] itself if there is none. */
+    private fun removeFirst(
+        l: List<Any?>,
+        x: Any?,
+    ): List<Any?> {
+        val i = l.indexOfFirst { valuesEqual(it, x) }
+        return if (i < 0) l else l.subList(0, i) + l.subList(i + 1, l.size)
+    }
 
     // -- Numbers. D8: int arithmetic on Ints checks for overflow (SML's Overflow); Longs (intinf, time) do not.
 

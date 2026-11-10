@@ -126,6 +126,8 @@ data class CanvasColors(
 @Composable
 fun NetCanvas(
     page: PageDocument,
+    /** Page id to name, for the subpage label of substitution transitions (ids are opaque in .cpn files). */
+    pageNames: Map<String, String>,
     mode: CanvasMode,
     tool: Tool?,
     selection: String?,
@@ -298,7 +300,7 @@ fun NetCanvas(
                 if (transition.guard.isNotBlank()) {
                     drawLabel(measurer, ellipsize("[${transition.guard}]", 40), Point(shape.left, shape.top - 18), labelStyle)
                 }
-                transition.subpageId?.let { drawLabel(measurer, it, Point(shape.left + 4, shape.bottom + 2), noteStyle) }
+                transition.subpageId?.let { drawLabel(measurer, pageNames[it] ?: it, Point(shape.left + 4, shape.bottom + 2), noteStyle) }
             }
 
             arcPreview?.let { (from, to) ->

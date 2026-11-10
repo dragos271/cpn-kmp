@@ -66,7 +66,10 @@ public object LiteralColsetEvaluator : ColsetEvaluator {
                 }
             is ListExpr -> expr.elements.map(::value)
             is TupleExpr -> MlTuple(expr.elements.map(::value))
-            else -> throw ColsetDeclarationException(expr.span, "only constants are supported here until the evaluator exists (T2.5)")
+            else -> throw ColsetDeclarationException(
+                expr.span,
+                "only constants are supported here; colour sets that use values are built by the evaluator",
+            )
         }
 
     override fun predicate(
@@ -84,6 +87,9 @@ public class ColourSetEnvironment(
     private val source: SourceText? = null,
 ) {
     private val sets = LinkedHashMap<String, CpnColourSet>()
+
+    /** Standard colour sets not yet declared again: CPN Tools files declare UNIT, INT, ... themselves. */
+    private val replaceable = mutableSetOf<String>()
 
     public operator fun get(name: String): CpnColourSet? = sets[name]
 
@@ -103,7 +109,7 @@ public class ColourSetEnvironment(
 
     public fun declare(decl: ColsetDecl): CpnColourSet {
         val name = decl.name.name
-        if (name in sets) fail(decl.name.span, "colour set $name is already declared")
+        if (name in sets && !replaceable.remove(name)) fail(decl.name.span, "colour set $name is already declared")
         val colourSet =
             try {
                 build(name, decl.spec)
@@ -206,6 +212,7 @@ public class ColourSetEnvironment(
                 define(LongColourSet("TIME", 0..Long.MAX_VALUE))
                 define(RealColourSet("REAL"))
                 define(StringColourSet("STRING"))
+                replaceable += names
             }
     }
 }

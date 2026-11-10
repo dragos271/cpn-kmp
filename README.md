@@ -37,6 +37,7 @@ Targets: JVM 17+, JS (Node), Wasm (Node), macOS arm64/x64, Linux x64, Windows x6
 ./gradlew :cpn-cli:installJvmDist
 cpn-cli/build/install/cpn-jvm/bin/cpn simulate examples/simple-protocol.json --seed 2026 -n 25
 cpn-cli/build/install/cpn-jvm/bin/cpn simulate examples/simple-protocol.json --format json --no-trace
+cpn-cli/build/install/cpn-jvm/bin/cpn simulate corpus/cpnbook/models/chapter2/2-1DeterministicProtocol.cpn --seed 1
 ```
 
 ### The app (desktop and web)
@@ -49,7 +50,9 @@ cpn-cli/build/install/cpn-jvm/bin/cpn simulate examples/simple-protocol.json --f
 It opens the textbook simple protocol: fire enabled bindings, step, run with a seed, reset. For the same
 seed it shows exactly the trace `cpn simulate` prints.
 
-Models are in a temporary JSON format until `.cpn` import lands: see [docs/json-format.md](docs/json-format.md).
+`cpn simulate` and the app open CPN Tools `.cpn` files (see [docs/cpn-format.md](docs/cpn-format.md) and
+[docs/corpus-results.md](docs/corpus-results.md)), the editable document format and the JSON format of
+[docs/json-format.md](docs/json-format.md).
 Exit code 1 means the model could not be read, loaded or simulated.
 
 Requires JDK 17+ (CI uses 21). Native tests run only for the host OS; CI covers Linux, macOS and Windows.

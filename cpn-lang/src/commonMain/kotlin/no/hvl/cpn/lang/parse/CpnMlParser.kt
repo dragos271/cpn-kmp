@@ -116,6 +116,12 @@ public class CpnMlParser(
     /** A single inscription: guard, arc expression, initial marking, time delay. */
     public fun parseExpression(source: SourceText): Expr = Parser(source, fixities).expressionToEnd()
 
+    /**
+     * A guard. Besides a boolean or a list of booleans, CPN Tools accepts a list without brackets,
+     * `n = i, i < max`, which becomes the [ListExpr] `[n = i, i < max]`.
+     */
+    public fun parseGuard(source: SourceText): Expr = Parser(source, fixities).guardToEnd()
+
     /** A type, e.g. the annotation in `var` declarations of other tools; mostly useful in tests. */
     public fun parseType(source: SourceText): TypeExpr = Parser(source, fixities).typeToEnd()
 }
@@ -158,6 +164,19 @@ private class Parser(
         val expr = expression()
         expectEof()
         return expr
+    }
+
+    fun guardToEnd(): Expr {
+        val start = peek().span.start
+        val first = expression()
+        if (!atPunct(",")) {
+            expectEof()
+            return first
+        }
+        val elements = mutableListOf(first)
+        while (acceptPunct(",")) elements += expression()
+        expectEof()
+        return node(start, ListExpr(elements))
     }
 
     fun typeToEnd(): TypeExpr {

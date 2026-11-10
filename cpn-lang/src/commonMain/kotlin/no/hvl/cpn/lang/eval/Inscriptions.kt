@@ -60,6 +60,25 @@ public class CpnMlInscriptions(
         }
     }
 
+    /**
+     * The summands of an arc inscription that is a sum of patterns, ``1`(n1,1) ++ 1`(n2,2)``, so each
+     * can become an arc of its own and bind its variables from a token; `[expr]` otherwise. Arcs
+     * between the same place and transition add up, so this changes nothing but the binding search.
+     */
+    public fun summands(expr: Expr): List<Expr> {
+        fun flatten(e: Expr): List<Expr> =
+            if (e is InfixExpr &&
+                e.operator.text == "++" &&
+                e.operator.qualifiers.isEmpty()
+            ) {
+                flatten(e.left) + flatten(e.right)
+            } else {
+                listOf(e)
+            }
+        val parts = flatten(expr)
+        return if (parts.size > 1 && parts.all { pattern(it) != null }) parts else listOf(expr)
+    }
+
     /** A guard: a boolean, or a list of booleans that must all hold. */
     public fun guard(
         expr: Expr,
@@ -132,9 +151,10 @@ public class CpnMlInscriptions(
         return if (isShape(shape)) count to shape else null
     }
 
-    /** Variables, constants, constructors, tuples, records and lists of those. */
+    /** Variables, constants, constructors, tuples, records and lists of those, and `x::xs`. */
     private fun isShape(e: Expr): Boolean =
         when (e) {
+            is InfixExpr -> isCons(e) && isShape(e.left) && isShape(e.right)
             is ConstExpr -> e.constant !is Constant.RealConst
             is IdentExpr -> e.name.qualifiers.isEmpty() && (e.name.name in variables || interpreter.isConstructor(e.name.name))
             is TupleExpr -> e.elements.all(::isShape)
@@ -200,9 +220,20 @@ public class CpnMlInscriptions(
                 val name = (shape.function as IdentExpr).name.name
                 if (token is MlCon && token.name == name && token.hasArgument) matchShape(shape.argument, token.argument, binding) else null
             }
+            is InfixExpr -> {
+                // x::xs on a list token: the head and the tail.
+                val list = token as? List<*>
+                if (!isCons(shape) || list.isNullOrEmpty()) {
+                    null
+                } else {
+                    matchShape(shape.left, list.first(), binding)?.let { matchShape(shape.right, list.subList(1, list.size), it) }
+                }
+            }
             is TypedExpr -> matchShape(shape.expr, token, binding)
             else -> null
         }
+
+    private fun isCons(e: InfixExpr) = e.operator.text == "::" && e.operator.qualifiers.isEmpty()
 
     private fun values(
         variables: Set<Variable<*>>,

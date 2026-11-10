@@ -93,7 +93,10 @@ internal class NetValidator(
             if (socket.colourSet != port.colourSet) report("$where: $pair, colour sets differ (${socket.colourSet} vs ${port.colourSet})")
             val directions = arcs.filter { it.place === socket }.map { it.direction }.toSet()
             val expected = port.portType?.let(::socketDirection)
-            if (expected != null && directions != setOf(expected)) {
+            // An I/O socket may also be connected by one arc in each direction, as CPN Tools allows.
+            val bothWays = setOf(ArcDirection.PLACE_TO_TRANSITION, ArcDirection.TRANSITION_TO_PLACE)
+            val accepted = directions == setOf(expected) || (expected == ArcDirection.BIDIRECTIONAL && directions == bothWays)
+            if (expected != null && !accepted) {
                 report("$where: $pair, a ${port.portType} port needs a single $expected arc, found $directions")
             }
         }

@@ -54,6 +54,7 @@ public class Fixities private constructor(
                 .with(listOf("`"), InfixInfo(8, false))
                 .with(listOf("**", "@+"), InfixInfo(7, false))
                 .with(listOf("++", "--"), InfixInfo(6, false))
+                .with(listOf("^^"), InfixInfo(5, true))
                 .with(listOf("==", "<><>", "<<=", ">>=", "<<", ">>"), InfixInfo(4, false))
     }
 }

@@ -1,5 +1,6 @@
 package no.hvl.cpn.app.files
 
+import no.hvl.cpn.io.xml.Xml
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -13,12 +14,13 @@ private object DesktopFileAccess : ModelFileAccess {
     override suspend fun open(): OpenedFile? {
         val dialog =
             FileDialog(null as Frame?, "Open model", FileDialog.LOAD).apply {
-                setFilenameFilter { _, name -> name.endsWith(".json") }
+                setFilenameFilter { _, name -> name.endsWith(".json") || name.endsWith(".cpn") }
                 isVisible = true
             }
         val name = dialog.file ?: return null
         val file = File(dialog.directory, name)
-        return OpenedFile(file.absolutePath, file.readText())
+        // .cpn files declare ISO-8859-1; Xml.decode honours that and reads everything else as UTF-8.
+        return OpenedFile(file.absolutePath, Xml.decode(file.readBytes()))
     }
 
     override suspend fun save(

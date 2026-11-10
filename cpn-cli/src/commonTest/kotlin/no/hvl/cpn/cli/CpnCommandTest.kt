@@ -48,15 +48,38 @@ class CpnCommandTest {
         }
         """.trimIndent()
 
+    /** The countdown as CPN Tools saves it (T3.1), with a delay the engine ignores until T3.2. */
+    private val cpnTools =
+        """
+        <?xml version="1.0" encoding="iso-8859-1"?>
+        <workspaceElements>
+          <generator tool="CPN Tools" version="4.0.1" format="6"/>
+          <cpnet>
+            <globbox>
+              <color id="c1"><id>N</id><int><with><ml>0</ml><ml>3</ml></with></int><layout>colset N = int with 0..3;</layout></color>
+              <var id="v1"><type><id>N</id></type><id>n</id><layout>var n : N;</layout></var>
+            </globbox>
+            <page id="Main">
+              <pageattr name="Main"/>
+              <place id="P"><posattr x="0" y="0"/><text>P</text><type id="t"><text>N</text></type><initmark id="i"><text>1`3</text></initmark></place>
+              <trans id="Dec"><posattr x="100" y="0"/><text>Dec</text><cond id="g"><text>n &gt; 0</text></cond><time id="d"><text>@+1</text></time></trans>
+              <arc id="a1" orientation="PtoT" order="1"><transend idref="Dec"/><placeend idref="P"/><annot id="x1"><text>n</text></annot></arc>
+              <arc id="a2" orientation="TtoP" order="1"><transend idref="Dec"/><placeend idref="P"/><annot id="x2"><text>n - 1</text></annot></arc>
+            </page>
+          </cpnet>
+        </workspaceElements>
+        """.trimIndent()
+
     private val files =
         mapOf(
+            "countdown.cpn" to cpnTools,
             "countdown.json" to model,
             "countdown.cpnd" to document,
             "divide.cpnd" to document.replace("fun dec n = n - 1;", "fun dec n = n div 0;"),
             "broken.json" to """{"name": "X", "pages": []}""",
         )
 
-    private fun cpn() = CpnCommand(readFile = { files[it] ?: throw NoSuchElementException("no such file") })
+    private fun cpn() = CpnCommand(readFile = { (files[it] ?: throw NoSuchElementException("no such file")).encodeToByteArray() })
 
     @Test
     fun printsBannerWithoutSubcommand() {
@@ -76,6 +99,15 @@ class CpnCommandTest {
         val document = cpn().test("simulate countdown.cpnd --seed 7")
         assertEquals(0, document.statusCode, document.stderr)
         assertEquals(json.stdout, document.stdout)
+    }
+
+    @Test
+    fun runsCpnToolsFilesLikeJsonModels() {
+        val json = cpn().test("simulate countdown.json --seed 7")
+        val cpnFile = cpn().test("simulate countdown.cpn --seed 7")
+        assertEquals(0, cpnFile.statusCode, cpnFile.stderr)
+        assertEquals(json.stdout, cpnFile.stdout)
+        assertTrue("note: 1 transition delays (@+) are ignored" in cpnFile.stderr, cpnFile.stderr)
     }
 
     @Test

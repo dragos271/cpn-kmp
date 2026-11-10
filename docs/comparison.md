@@ -53,7 +53,7 @@ repositories.
 | State space | ✅ | ✅ | ❌ | ❌ | Planned (F8) |
 | Standard state-space report | ✅ | ✅ | ❌ | ❌ | Planned (F8) |
 | **Files** | | | | | |
-| Reads `.cpn` | ✅ | ✅ | ❌ (future work §7.3) | ❌ | Planned (F4) |
+| Reads `.cpn` | ✅ | ✅ | ❌ (future work §7.3) | ✅ | 49/49 corpus models import, 26/49 run ([results](corpus-results.md)) |
 | Writes `.cpn` | ✅ | ❌ | ❌ | ❌ | Planned (F5) |
 | Own JSON format | ❌ | ❌ | ✅ GoJS model JSON | ✅ | Documented in json-format.md |
 | Stable under repeated save/open | ✅ | n/a | ❌ known bugs: sizes and arc ports lost on reload (§7.3.1–7.3.2) | 🟡 JSON yes, `.cpn` not yet | F6 makes this a CI test |

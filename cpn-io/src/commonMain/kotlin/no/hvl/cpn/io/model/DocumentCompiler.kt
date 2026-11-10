@@ -1,7 +1,6 @@
 package no.hvl.cpn.io.model
 
 import no.hvl.cpn.core.Arc
-import no.hvl.cpn.core.ArcInscription
 import no.hvl.cpn.core.Guard
 import no.hvl.cpn.core.Multiset
 import no.hvl.cpn.core.Net
@@ -54,6 +53,12 @@ public fun CpnDocument.compile(random: RandomSource = RandomSource.seeded(0)): C
     }
 }
 
+/**
+ * The name the engine uses in traces and reports: CPN Tools names often span lines ("Packets\nTo
+ * Send"), so runs of whitespace become one space. The document keeps the name as written.
+ */
+internal fun displayName(name: String): String = name.trim().split(Regex("\\s+")).joinToString(" ")
+
 private class CompileProblem(
     val problem: Problem,
 ) : Exception(problem.message)
@@ -90,14 +95,23 @@ private class DocumentCompiler(
         val places = doc.places.associate { it.id to place(it) }
         val transitions = doc.transitions.associate { it.id to transition(it, doc, places) }
         val arcs =
-            doc.arcs.map { arc ->
+            doc.arcs.flatMap { arc ->
                 @Suppress("UNCHECKED_CAST")
                 val place = places.getValue(arc.placeId) as Place<Any?>
                 val transition = transitions.getValue(arc.transitionId)
-                Arc(arc.id, place, transition, arc.direction, if (transition.isSubstitution) null else inscription(arc, place))
+                if (transition.isSubstitution) {
+                    listOf(Arc(arc.id, place, transition, arc.direction, null))
+                } else {
+                    // A sum of patterns becomes one arc per summand (ids arc, arc#2, ...): see CpnMlInscriptions.summands.
+                    val (expr, source) = expression(arc.inscription, arc.id)
+                    inscriptions.summands(expr).mapIndexed { i, part ->
+                        val id = if (i == 0) arc.id else "${arc.id}#${i + 1}"
+                        Arc(id, place, transition, arc.direction, inscriptions.arc(part, place.colourSet as CpnColourSet, source))
+                    }
+                }
             }
         building -= id
-        return Page(doc.id, doc.name, places.values.toList(), transitions.values.toList(), arcs).also { pages[id] = it }
+        return Page(doc.id, displayName(doc.name), places.values.toList(), transitions.values.toList(), arcs).also { pages[id] = it }
     }
 
     private fun place(node: PlaceNode): Place<Any?> {
@@ -109,7 +123,7 @@ private class DocumentCompiler(
                 val (expr, source) = expression(node.initialMarking, node.id)
                 attempt(node.id, ProblemField.INITIAL_MARKING) { inscriptions.multiset(expr, colourSet, source) }
             }
-        return Place(node.id, node.name, colourSet, marking, node.port, node.fusionSet)
+        return Place(node.id, displayName(node.name), colourSet, marking, node.port, node.fusionSet)
     }
 
     private fun transition(
@@ -133,33 +147,26 @@ private class DocumentCompiler(
                             )
                     socket to port
                 }
-            return Transition(node.id, node.name, substitution = Substitution(subpage, assignments))
+            return Transition(node.id, displayName(node.name), substitution = Substitution(subpage, assignments))
         }
         val guard =
             if (node.guard.isBlank()) {
                 Guard.TRUE
             } else {
-                val (expr, source) = expression(node.guard, node.id)
+                val (expr, source) = expression(node.guard, node.id, guard = true)
                 inscriptions.guard(expr, source)
             }
-        return Transition(node.id, node.name, guard)
-    }
-
-    private fun inscription(
-        arc: ArcEdge,
-        place: Place<Any?>,
-    ): ArcInscription<Any?> {
-        val (expr, source) = expression(arc.inscription, arc.id)
-        return inscriptions.arc(expr, place.colourSet as CpnColourSet, source)
+        return Transition(node.id, displayName(node.name), guard)
     }
 
     /** Already parsed successfully by [check], with the same fixities. */
     private fun expression(
         text: String,
         elementId: String,
+        guard: Boolean = false,
     ): Pair<Expr, SourceText> {
         val source = SourceText(elementId, text)
-        return parser.parseExpression(source) to source
+        return (if (guard) parser.parseGuard(source) else parser.parseExpression(source)) to source
     }
 
     private fun <T> attempt(

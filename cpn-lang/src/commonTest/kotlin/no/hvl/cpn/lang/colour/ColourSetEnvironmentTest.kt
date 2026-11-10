@@ -93,8 +93,8 @@ class ColourSetEnvironmentTest {
         assertEquals("decls:1:22: expected a real", errorOf("colset R = real with 0..1;"))
         assertEquals("decls:1:24: 2147483648 does not fit in an int", errorOf("colset S = int with 1..2147483648;"))
         assertEquals("decls:1:24: expected a one-character string", errorOf("colset S = string with \"ab\"..\"z\";"))
-        // Range bounds and predicates that are not constants need the evaluator (T2.5).
-        assertTrue("until the evaluator exists" in errorOf("val n = 5; colset S = int with 1..n;"))
+        // Without an evaluator, range bounds and predicates that are not constants are rejected.
+        assertTrue("built by the evaluator" in errorOf("val n = 5; colset S = int with 1..n;"))
         assertTrue("needs the evaluator" in errorOf("colset E = subset INT by fn x => x > 0;"))
     }
 }

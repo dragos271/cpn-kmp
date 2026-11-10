@@ -24,6 +24,10 @@ M_ALL = [
   "is LongColourSet -> if (value is Int) value.toLong() else value", "is LongColourSet -> value", [":cpn-lang:jvmTest", ":cpn-io:jvmTest"]),
  ("M6 guard given as a list passes if ANY condition holds", L+"Inscriptions.kt",
   "else -> (value as List<*>).all { it as Boolean }", "else -> (value as List<*>).any { it as Boolean }", [":cpn-lang:jvmTest", ":cpn-io:jvmTest", ":cpn-app:desktopTest"]),
+ ("M7 .cpn import does not flip the y axis", "cpn-io/src/commonMain/kotlin/no/hvl/cpn/io/cpntools/CpnToolsFormat.kt",
+  "-(p[\"y\"]?.toDoubleOrNull() ?: 0.0)", "(p[\"y\"]?.toDoubleOrNull() ?: 0.0)", [":cpn-io:jvmTest"]),
+ ("M8 .cpn import reads portsock pairs as (socket, port)", "cpn-io/src/commonMain/kotlin/no/hvl/cpn/io/cpntools/CpnToolsFormat.kt",
+  "?.associate { it.groupValues[2] to it.groupValues[1] }", "?.associate { it.groupValues[1] to it.groupValues[2] }", [":cpn-io:jvmTest"]),
 ]
 M = [m for m in M_ALL if only is None or m[0].split()[0] in only]
 results = []

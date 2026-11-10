@@ -8,12 +8,12 @@ import com.github.ajalt.clikt.parameters.options.versionOption
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
-import kotlinx.io.readString
+import kotlinx.io.readByteArray
 import no.hvl.cpn.api.Cpn
 
-/** Root `cpn` command. More subcommands (`check`, `statespace`, `convert`) come in T3.6. */
+/** Root `cpn` command. More subcommands (`check`, `statespace`, `convert`) come in T3.6. [readFile] is replaced in tests. */
 class CpnCommand(
-    readFile: (String) -> String = ::readTextFile,
+    readFile: (String) -> ByteArray = ::readBytesFile,
 ) : CliktCommand(name = "cpn") {
     init {
         versionOption(Cpn.VERSION, names = setOf("--version", "-V"))
@@ -32,6 +32,6 @@ class CpnCommand(
     }
 }
 
-internal fun readTextFile(path: String): String = SystemFileSystem.source(Path(path)).buffered().use { it.readString() }
+internal fun readBytesFile(path: String): ByteArray = SystemFileSystem.source(Path(path)).buffered().use { it.readByteArray() }
 
 fun main(args: Array<String>) = CpnCommand().main(args)

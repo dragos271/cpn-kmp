@@ -50,7 +50,7 @@ private external fun downloadText(
     """(onFile, onCancel) => {
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = '.json,application/json';
+        input.accept = '.json,.cpn,application/json';
         input.onchange = () => {
             const file = input.files && input.files[0];
             if (!file) { onCancel(); return; }

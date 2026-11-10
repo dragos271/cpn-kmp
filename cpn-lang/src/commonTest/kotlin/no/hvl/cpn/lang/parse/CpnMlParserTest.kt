@@ -204,6 +204,18 @@ class CpnMlParserTest {
     }
 
     @Test
+    fun guardsMayBeListsWithoutBrackets() {
+        val parser = CpnMlParser()
+        assertEquals(
+            "(list (infix = (id n) (id i)) (infix < (id i) (id max)))",
+            parser.parseGuard(SourceText("g", "n = i, i < max")).toSExpr(),
+        )
+        assertEquals("(infix < (id n) (id max))", parser.parseGuard(SourceText("g", "n < max")).toSExpr())
+        assertEquals("(list (id a) (id b))", parser.parseGuard(SourceText("g", "[a, b]")).toSExpr())
+        assertFailsWith<ParseException> { parser.parseGuard(SourceText("g", "a,")) }
+    }
+
+    @Test
     fun typeDatatypeExceptionLocalOpen() {
         assertEquals("(type (pair (params 'a) (tytuple 'a 'a)))", decl("type 'a pair = 'a * 'a"))
         assertEquals("(type (f (params) (-> int (-> int bool))))", decl("type f = int -> int -> bool"))

@@ -1,0 +1,55 @@
+# Corpus results: importing real CPN Tools models (T3.1)
+
+Last run: 2026-11-10, on the 49 models in [corpus/](../corpus/README.md).
+
+To reproduce:
+
+```bash
+./gradlew :cpn-io:jvmTest --tests '*CorpusImportTest*'
+```
+
+The run writes the full table to `cpn-io/build/reports/corpus-import.md`. CI fails if any model
+stops importing, or if fewer than 26 models run.
+
+## Summary
+
+| Outcome | Models | Meaning |
+|---|---|---|
+| **Imports** | **49 / 49** | The `.cpn` file is read into an editable model: pages, layout, inscriptions, declarations, hierarchy |
+| **Runs** | **26 / 49** | It type-checks, compiles and simulates 200 steps (or to a dead marking) without errors |
+| Does not run yet | 23 / 49 | A problem is reported by name; the causes are listed below |
+
+"Runs" means the model executes. It does not yet mean the model gives the same results as CPN
+Tools; that comparison is T4.2. One model is checked by hand: the textbook's deterministic
+protocol, figure 2.1, delivers all six packets and goes dead after 30 steps, as in the book.
+
+Two of the 26 are timed models running untimed, because delays are ignored until T3.2:
+`10-1TimedProtocol` and `10-19TimedStateSpaces`. Their import notes say so.
+
+## Why 23 models do not run yet
+
+| Cause | Models | What CPN Tools does | Where to fix |
+|---|---|---|---|
+| **Multisets are lists.** In CPN Tools `'a ms` *is* `'a list`, so a list can be an initial marking or an arc inscription, and list functions work on multisets | 9: `lecture1`, `lecture3`, `lecture4`, the three `lecture6-statespaces` models, `twophasecommit`, `5-30MultipleReceivers`, `singlePaxos` | Accepts it | Type checker and evaluator: a new task |
+| **SML file I/O and `use`**: `TextIO`, loading `.sml` files, code segments that write logs | 6: the four NatCPN models, `QueueSystem`, `DisCSP` | Runs the SML/NJ Basis | Out of scope (instrumentation and logging), or offer a stub |
+| **Timed patterns** such as `p@t` | 3: the three `PerformanceProtocol` models | Timed nets | T3.2 |
+| **Missing library functions**: colour set `mult`, `sort_ms` | 2: `DistributedDataBase`, `MQTT` | Built in | Small additions |
+| **Inhibitor and reset arcs** | 1: `lecture2-ptnets` | Supports them | Open question for the supervisor |
+| **Equality on `real`** | 1: `fuelstation-cpn-ide` | Its SML/NJ version accepts `=` on reals, which SML'97 does not | Decide whether to allow it |
+| **An unused broken declaration**: `var dp : DATAP`, where `DATAP` is never declared | 1: `3-1UnionRecord` | Checks each declaration on its own, so an unused bad one does not block simulation | Per-declaration checking |
+
+## Fixed while running the corpus
+
+Running real models found these gaps in our importer and engine. Each is fixed and has a test.
+
+| Gap | Effect | Fix |
+|---|---|---|
+| CPN Tools files declare `UNIT`, `INT`, `BOOL`, … themselves | Almost every model failed with "already declared" | The standard colour sets may be declared once more |
+| `check()` built colour sets without the evaluator | `colset X = int with 1..n` failed | Declarations run in the evaluator during the check |
+| CPN Tools resolves declarations by dependency, not file order | Variables declared before their colour set failed | The importer sorts declarations by dependency |
+| Layout text can contain leftovers, such as a stray `v` after a declaration | Parse errors | Only the first declaration in a layout is used (comments kept); a layout that does not start with `colset`/`var` is rebuilt from the XML structure |
+| Guards written as `a, b` without brackets | Parse errors | `parseGuard` reads them as a guard list |
+| `x::xs` patterns on list tokens | The variables could not be bound | `::` is a pattern |
+| Sums of patterns such as ``1`(n1,1)++1`(n2,2)`` | The variables could not be bound | Each summand becomes its own arc |
+| An I/O socket connected by one arc each way | Rejected as malformed | Accepted, as in CPN Tools |
+| CPN Tools' list library (`mem`, `rm`, `ins`, `^^`, `list_to_ms`, …) | Unbound names | Added (semantics provisional until T4.2) |

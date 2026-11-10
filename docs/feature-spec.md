@@ -85,7 +85,12 @@ unchanged only where F6 needs them).
 - Every element that is not supported is reported by name: nothing is silently dropped.
 - Each imported model type-checks, or its failures are categorised.
 
-**Status: not started** (T3.1).
+**Status: done** (T3.1, 2026-11-10).
+- All 49 corpus models import; 26 type-check and run.
+- The remaining 23 are categorised in [corpus-results.md](corpus-results.md): 9 because CPN Tools treats
+  multisets as lists (T2.10), 6 because they use SML file I/O, 3 because they need timed nets (T3.2),
+  and 5 for smaller gaps.
+- Ignored features are listed in the import notes, and unsupported ones are reported as problems.
 
 ## F5 `.cpn` export
 

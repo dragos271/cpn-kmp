@@ -12,7 +12,9 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.put
 import no.hvl.cpn.core.ArcDirection
 import no.hvl.cpn.core.PortType
+import no.hvl.cpn.io.cpntools.CpnToolsFormat
 import no.hvl.cpn.io.model.ArcEdge
+import no.hvl.cpn.io.model.ArcKind
 import no.hvl.cpn.io.model.CpnDocument
 import no.hvl.cpn.io.model.PageDocument
 import no.hvl.cpn.io.model.PlaceNode
@@ -20,6 +22,7 @@ import no.hvl.cpn.io.model.Point
 import no.hvl.cpn.io.model.TransitionNode
 import no.hvl.cpn.io.model.compile
 import no.hvl.cpn.io.model.structure
+import no.hvl.cpn.io.xml.Xml
 
 /** How a model was saved, so an editor can tell the user what the file can be used for. */
 public enum class SavedFormat {
@@ -50,10 +53,20 @@ public object ModelFiles {
     private val pretty = Json { prettyPrint = true }
 
     /**
+     * Opens a CPN Tools `.cpn` file (T3.1), an editable document or a runnable JSON model. A `.cpn`
+     * file is named [name], usually its file name without the extension; the other formats carry a name.
+     *
      * @throws ModelFormatException if [text] is not a model file.
      * @throws no.hvl.cpn.core.InvalidNetException if it is a runnable model that is not well-formed.
      */
-    public fun open(text: String): LoadedModel {
+    public fun open(
+        text: String,
+        name: String = "Untitled",
+    ): LoadedModel {
+        if (CpnToolsFormat.recognises(text)) {
+            val imported = CpnToolsFormat.read(text, name)
+            return LoadedModel(net = imported.document.compile().net, document = imported.document, notes = imported.notes)
+        }
         val root =
             try {
                 Json.parseToJsonElement(text)
@@ -67,6 +80,15 @@ public object ModelFiles {
         }
         return JsonNetFormat.load(text)
     }
+
+    /** [open] for a file's bytes, decoded by the encoding a `.cpn` file declares (ISO-8859-1) or as UTF-8. */
+    public fun open(
+        bytes: ByteArray,
+        name: String = "Untitled",
+    ): LoadedModel = open(Xml.decode(bytes), name)
+
+    /** The model name for a file: its name without directories and extension. */
+    public fun modelName(path: String): String = path.substringAfterLast('/').substringAfterLast('\\').substringBeforeLast('.')
 
     public fun save(
         model: LoadedModel,
@@ -210,6 +232,9 @@ public object CpnDocumentFormat {
                                 if (t.portAssignments.isNotEmpty()) {
                                     put("ports", buildJsonObject { t.portAssignments.forEach { (socket, port) -> put(socket, port) } })
                                 }
+                                if (t.time.isNotEmpty()) put("time", t.time)
+                                if (t.priority.isNotEmpty()) put("priority", t.priority)
+                                if (t.code.isNotEmpty()) put("code", t.code)
                             },
                         )
                     }
@@ -226,6 +251,7 @@ public object CpnDocumentFormat {
                                 put("transition", a.transitionId)
                                 put("direction", directionName(a.direction))
                                 put("inscription", a.inscription)
+                                if (a.kind != ArcKind.NORMAL) put("kind", a.kind.name.lowercase())
                                 if (a.bends.isNotEmpty()) {
                                     put(
                                         "bends",
@@ -303,6 +329,9 @@ public object CpnDocumentFormat {
                                             ?: fail("$at.ports.$socket", "expected a port id")
                                     )
                             }.orEmpty(),
+                    time = obj.optionalString("time", at) ?: "",
+                    priority = obj.optionalString("priority", at) ?: "",
+                    code = obj.optionalString("code", at) ?: "",
                 )
             }
         val nodeIds = (places.map { it.id } + transitions.map { it.id }).toSet()
@@ -322,6 +351,7 @@ public object CpnDocumentFormat {
                                 val pair = b.asArray("$at.bends[$j]")
                                 Point(number(pair[0], "$at.bends[$j]"), number(pair[1], "$at.bends[$j]"))
                             },
+                        kind = obj.optionalString("kind", at)?.let { arcKind(it, "$at.kind") } ?: ArcKind.NORMAL,
                     )
                 if (arc.placeId !in nodeIds) fail("$at.place", "no place '${arc.placeId}' on this page")
                 if (arc.transitionId !in nodeIds) fail("$at.transition", "no transition '${arc.transitionId}' on this page")
@@ -357,6 +387,11 @@ public object CpnDocumentFormat {
             "both" -> ArcDirection.BIDIRECTIONAL
             else -> fail(path, "expected in, out or both")
         }
+
+    private fun arcKind(
+        value: String,
+        path: String,
+    ): ArcKind = ArcKind.entries.firstOrNull { it.name.lowercase() == value } ?: fail(path, "expected normal, inhibitor or reset")
 
     private fun portName(port: PortType): String =
         when (port) {

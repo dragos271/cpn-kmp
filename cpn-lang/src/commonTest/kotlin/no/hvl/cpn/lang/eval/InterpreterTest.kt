@@ -176,6 +176,21 @@ class InterpreterTest {
     }
 
     @Test
+    fun cpnToolsListFunctions() {
+        assertEquals("[1,2,3]", eval("[1] ^^ [2] ^^ [3]"))
+        assertEquals("(true,false)", eval("(mem [1, 2] 2, mem [1, 2] 3)"))
+        assertEquals("([1,3,2],[1,3])", eval("(rm 2 [1, 2, 3, 2], rmall 2 [1, 2, 3, 2])"))
+        assertEquals("([1,2],[1,2])", eval("(ins [1] 2, ins_new [1, 2] 2)"))
+        assertEquals("([1,2,2],[2])", eval("(union [1, 2] [2], intersect [1, 2, 2] [2, 3])"))
+        assertEquals("([1,2],[1,2,3])", eval("(listsub [1, 2, 2, 3] [2, 3], remdupl [1, 2, 1, 3, 2])"))
+        assertEquals("(true,false,true)", eval("(contains [1, 2, 2] [2, 2], contains [1, 2] [2, 2], contains_all [1, 2] [2, 2])"))
+        assertEquals("2`1++1`2", eval("list_to_ms [1, 2, 1]"))
+        assertEquals("[1,1,2]", eval("ms_to_list (2`1 ++ 1`2)"))
+        assertEquals("(5,\"~7\")", eval("(IntInf.toInt (IntInf.fromInt 5), IntInf.toString (IntInf.fromInt ~7))"))
+        assertEquals("(true,true)", eval("(String.isSuffix \"lo\" \"hello\", String.isSubstring \"ell\" \"hello\")"))
+    }
+
+    @Test
     fun randomFunctionsAreDeterministicAndInRange() {
         val (parser, interpreter) = interpreter("colset NO = int with 1..6;")
         interpreter.random = RandomSource.seeded(7)

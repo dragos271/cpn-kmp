@@ -33,9 +33,11 @@ import kotlin.random.Random
 private const val MODEL_ERROR = 1
 
 class SimulateCommand(
-    private val readFile: (String) -> String,
+    private val readFile: (String) -> ByteArray,
 ) : CliktCommand(name = "simulate") {
-    private val file by argument(help = "Model file: a JSON model or an editable cpn-document (see docs/json-format.md)")
+    private val file by argument(
+        help = "Model file: a CPN Tools .cpn file, a JSON model or an editable cpn-document (see docs/json-format.md)",
+    )
     private val steps by option("--steps", "-n", help = "Maximum number of steps").int().restrictTo(min = 0).default(1000)
     private val seed by option(
         "--seed",
@@ -59,13 +61,15 @@ class SimulateCommand(
     }
 
     private fun load(): Net {
-        val text =
+        val bytes =
             try {
                 readFile(file)
             } catch (e: Exception) {
                 throw CliktError("Cannot read '$file': ${e.message}", statusCode = MODEL_ERROR)
             }
-        val model = modelErrors { ModelFiles.open(text) }
+        val model = modelErrors { ModelFiles.open(bytes, ModelFiles.modelName(file)) }
+        // What a .cpn file has that the engine ignores (monitors, priorities, delays until T3.2).
+        for (note in model.notes) echo("note: $note", err = true)
         return model.net ?: throw CliktError(
             "$file: the model cannot run:\n" +
                 model.document

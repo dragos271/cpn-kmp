@@ -7,6 +7,9 @@ import no.hvl.cpn.lang.ast.SourceText
 import no.hvl.cpn.lang.ast.Span
 import no.hvl.cpn.lang.colour.ColourSetEnvironment
 import no.hvl.cpn.lang.colour.ColsetDeclarationException
+import no.hvl.cpn.lang.eval.EvaluationException
+import no.hvl.cpn.lang.eval.Interpreter
+import no.hvl.cpn.lang.eval.MlRaise
 import no.hvl.cpn.lang.parse.CpnMlParser
 import no.hvl.cpn.lang.parse.ParseException
 import no.hvl.cpn.lang.types.TypeChecker
@@ -35,7 +38,9 @@ public data class Problem(
  * - every place has a declared colour set;
  * - every inscription parses and has the right type: initial markings and arc inscriptions denote
  *   tokens of their place's colour set (a colour or a multiset), guards are booleans;
- * - every arc of an ordinary transition has an inscription.
+ * - every arc of an ordinary transition has an inscription;
+ * - no element uses a CPN Tools feature the engine does not support (code segments, inhibitor and
+ *   reset arcs), so a model never runs with part of its behaviour missing.
  */
 public fun CpnDocument.check(): List<Problem> {
     val problems = mutableListOf<Problem>()
@@ -55,9 +60,22 @@ public fun CpnDocument.check(): List<Problem> {
     if (parsed != null) {
         val typeErrors = checker.checkDeclarations(parsed, declarationsSource)
         for (e in typeErrors) problems += Problem(null, ProblemField.DECLARATIONS, located(declarationsSource, e.span, e.reason))
-        // Building the colour sets finds what types cannot: empty ranges, repeated constants.
+        // Building the colour sets finds what types cannot: empty ranges, repeated constants. With
+        // well-typed declarations they are run in the evaluator, so ranges like `1..n` can use values.
+        if (typeErrors.isEmpty()) {
+            try {
+                Interpreter().declare(parsed, declarationsSource)
+            } catch (e: EvaluationException) {
+                problems += Problem(null, ProblemField.DECLARATIONS, located(declarationsSource, e.span, e.reason))
+            } catch (e: ColsetDeclarationException) {
+                problems += Problem(null, ProblemField.DECLARATIONS, located(declarationsSource, e.span, e.reason))
+            } catch (e: MlRaise) {
+                problems += Problem(null, ProblemField.DECLARATIONS, e.message ?: "uncaught exception")
+            }
+        }
         val colourSets = ColourSetEnvironment.standard(source = declarationsSource)
         for (decl in parsed.declarations.filterIsInstance<ColsetDecl>()) {
+            if (typeErrors.isEmpty()) break
             if (typeErrors.any { it.span.start in decl.span.start until decl.span.end }) continue
             try {
                 colourSets.declare(decl)
@@ -78,7 +96,7 @@ public fun CpnDocument.check(): List<Problem> {
     ): Pair<Expr, SourceText>? {
         val source = SourceText(elementId, text)
         return try {
-            parser.parseExpression(source) to source
+            (if (field == ProblemField.GUARD) parser.parseGuard(source) else parser.parseExpression(source)) to source
         } catch (e: ParseException) {
             problems += Problem(elementId, field, located(e.source, e.span, e.reason))
             null
@@ -110,11 +128,19 @@ public fun CpnDocument.check(): List<Problem> {
             }
         }
         for (transition in page.transitions) {
+            if (transition.code.isNotBlank()) {
+                problems += Problem(transition.id, ProblemField.STRUCTURE, "Code segments are not supported yet")
+            }
             if (transition.guard.isBlank()) continue
             val (expr, source) = expression(transition.guard, transition.id, ProblemField.GUARD) ?: continue
             if (typeCheck) report(checker.checkGuard(expr, source), transition.id, ProblemField.GUARD, source)
         }
         for (arc in page.arcs) {
+            if (arc.kind != ArcKind.NORMAL) {
+                val kind = if (arc.kind == ArcKind.INHIBITOR) "Inhibitor" else "Reset"
+                problems += Problem(arc.id, ProblemField.STRUCTURE, "$kind arcs are not supported yet")
+                continue
+            }
             // Socket arcs of substitution transitions carry no inscription.
             if (page.transition(arc.transitionId)?.subpageId != null) continue
             if (arc.inscription.isBlank()) {

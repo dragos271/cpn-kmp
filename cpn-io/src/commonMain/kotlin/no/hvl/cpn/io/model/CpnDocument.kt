@@ -46,7 +46,16 @@ public data class TransitionNode(
      * subpage). A socket without an entry is glued to the port with the same name.
      */
     val portAssignments: Map<String, String> = emptyMap(),
+    /** CPN Tools' time region, e.g. `@+9`; empty for none. Ignored until timed nets (T3.2). */
+    val time: String = "",
+    /** CPN Tools' priority region, e.g. `P_HIGH`; empty for the default. Not used by the simulator yet. */
+    val priority: String = "",
+    /** CPN Tools' code segment; empty for none. Not supported: [check] reports it. */
+    val code: String = "",
 )
+
+/** CPN Tools' arc kinds. Inhibitor and reset arcs are outside the CPN definition (Jensen & Kristensen) and not supported yet. */
+public enum class ArcKind { NORMAL, INHIBITOR, RESET }
 
 /** An arc between a place and a transition on the same page. */
 public data class ArcEdge(
@@ -57,6 +66,7 @@ public data class ArcEdge(
     /** Arc inscription as CPN ML text; empty for socket arcs of substitution transitions. */
     val inscription: String,
     val bends: List<Point> = emptyList(),
+    val kind: ArcKind = ArcKind.NORMAL,
 )
 
 public data class PageDocument(

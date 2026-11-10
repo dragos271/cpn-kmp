@@ -88,6 +88,7 @@ import no.hvl.cpn.core.ArcDirection
 import no.hvl.cpn.io.LoadedModel
 import no.hvl.cpn.io.ModelFiles
 import no.hvl.cpn.io.SavedFormat
+import no.hvl.cpn.io.cpntools.CpnToolsFormat
 import no.hvl.cpn.io.model.CompiledModel
 import no.hvl.cpn.io.model.ConnectResult
 import no.hvl.cpn.io.model.CpnDocument
@@ -224,7 +225,11 @@ fun EditorScreen(
         scope.launch {
             val file = files.open() ?: return@launch
             try {
-                onOpen(ModelFiles.open(file.text), file.name)
+                val opened = ModelFiles.open(file.text, ModelFiles.modelName(file.name))
+                // Saving writes the document format, so a .cpn file is never overwritten: Save asks
+                // where to save instead (until .cpn export, T3.1b).
+                onOpen(opened, if (CpnToolsFormat.recognises(file.text)) null else file.name)
+                if (opened.notes.isNotEmpty()) message = "Imported from CPN Tools. Not used: " + opened.notes.joinToString("; ")
             } catch (e: Exception) {
                 message = "Couldn't open ${file.name}: ${e.message}"
             }
@@ -420,6 +425,7 @@ fun EditorScreen(
                 ) {
                     NetCanvas(
                         page = page,
+                        pageNames = document.pages.associate { it.id to it.name },
                         mode = mode,
                         tool = tool,
                         selection = selection,
@@ -876,7 +882,7 @@ private fun PropertiesPanel(
                 if (subpageId != null) {
                     Field("Subpage") {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Code(subpageId, Modifier.weight(1f))
+                            Code(document.page(subpageId)?.name ?: subpageId, Modifier.weight(1f))
                             TextButton(onClick = { onOpenPage(subpageId) }) { Text("Open") }
                         }
                     }

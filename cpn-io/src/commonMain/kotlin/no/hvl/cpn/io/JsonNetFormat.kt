@@ -70,6 +70,8 @@ public data class LoadedModel(
     val net: Net?,
     val document: no.hvl.cpn.io.model.CpnDocument,
     val source: String? = null,
+    /** What the file has that the engine ignores or does not support (see [no.hvl.cpn.io.cpntools.ImportedModel.notes]). */
+    val notes: List<String> = emptyList(),
 )
 
 private class ColourSetSpec(

@@ -168,6 +168,18 @@ internal object Basis {
         >= : 'numtxt * 'numtxt -> bool
         ^ : string * string -> string
         @ : 'a list * 'a list -> 'a list
+        ^^ : 'a list * 'a list -> 'a list
+        mem : ''a list -> ''a -> bool
+        rm : ''a -> ''a list -> ''a list
+        rmall : ''a -> ''a list -> ''a list
+        ins : 'a list -> 'a -> 'a list
+        ins_new : ''a list -> ''a -> ''a list
+        union : 'a list -> 'a list -> 'a list
+        intersect : ''a list -> ''a list -> ''a list
+        listsub : ''a list -> ''a list -> ''a list
+        remdupl : ''a list -> ''a list
+        contains : ''a list -> ''a list -> bool
+        contains_all : ''a list -> ''a list -> bool
         not : bool -> bool
         o : ('b -> 'c) * ('a -> 'b) -> 'a -> 'c
         before : 'a * unit -> 'a
@@ -226,6 +238,11 @@ internal object Basis {
         String.explode : string -> char list
         String.implode : char list -> string
         String.isPrefix : string -> string -> bool
+        String.isSuffix : string -> string -> bool
+        String.isSubstring : string -> string -> bool
+        IntInf.toInt : int -> int
+        IntInf.fromInt : int -> int
+        IntInf.toString : int -> string
         Int.toString : int -> string
         Int.fromString : string -> int option
         Int.max : int * int -> int
@@ -271,6 +288,8 @@ internal object Basis {
         filter : ('a -> bool) -> 'a ms -> 'a ms
         ext_col : ('a -> 'b) -> 'a ms -> 'b ms
         ms_to_col : 'a ms -> 'a
+        list_to_ms : 'a list -> 'a ms
+        ms_to_list : 'a ms -> 'a list
         @+ : 'a * int -> 'a
         time : unit -> int
         intTime : unit -> int
