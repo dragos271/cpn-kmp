@@ -124,6 +124,16 @@ The goal is to run real CPN Tools models and produce state-space reports.
 - **T3.4 SCC + standard report.** Tarjan SCC, home markings, dead markings, dead/live transitions, integer/multiset bounds, and fairness. Output matches the CPN Tools "Standard Report" sections.
 - **T3.5 Model corpus.** Collect `.cpn` models: CPN Tools examples, textbook models and public repos. Record licence and source.
   *Done:* at least 30 models in `corpus/` with a manifest.
+  *Status:* done. 49 distinct models from four public collections are in `corpus/`:
+  - the Jensen & Kristensen textbook;
+  - Kristensen's CPN Tools course;
+  - CPN IDE's samples;
+  - HVL's MC/DC case studies (MQTT, Paxos, …).
+
+  Each model's source, commit and SHA-256 is in `corpus/sources.json`; none of the sources declares a licence.
+  `scripts/corpus-manifest.py` records the features each model uses. Of the 49, 11 are timed and 20 hierarchical;
+  8 use priorities, 6 monitors, and 2 inhibitor/reset arcs. CI checks the checksums, and `.gitattributes` keeps
+  the bytes unchanged on Windows.
 - **T3.6 Full CLI.** `cpn check`, `cpn simulate`, `cpn statespace`, `cpn convert --to python-like`, with `--format json|text` output for pipelines and exit codes for CI use.
 - **T3.7 Public API.** A stable facade: `CpnModel.load()`, `.simulator(seed)`, `.stateSpace()`. JVM (Java-friendly), `@JsExport` for JS/WASM, and a C header for native. Generate docs with Dokka.
 
@@ -169,7 +179,7 @@ The meeting notes and where each point is handled:
 |---|---|---|
 | Run the earlier tool and compare features (supported / not supported) | [comparison.md](docs/comparison.md) | Matrix done from the theses. Running them needs access: Gjesdal's editor repo is private and Garvik's F# simulator is not public |
 | Stable under repeated import/export (important) | T3.1c, F6 | Not started; JSON documents already round-trip |
-| Import existing `.cpn` files from the web | T3.5 corpus, T3.1 | Not started |
+| Import existing `.cpn` files from the web | T3.5 corpus, T3.1 | Corpus done (49 models); importer next |
 | Make `.cpn` files from scratch and run them in another CPN tool | T3.1b, F5 | Not started |
 | Timed nets: token availability, delays, integer time | T3.2, F7 | Not started |
 | The report at the end of the earlier work (state-space report) | T3.3, T3.4, F8 | Not started |

@@ -42,6 +42,9 @@ jobs:
         with:
           path: ~/.konan
           key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
+      - name: Corpus files are unchanged
+        shell: bash
+        run: $(command -v python3 || command -v python) scripts/corpus-manifest.py --check
       - name: Lint
         if: matrix.os == 'ubuntu-latest'
         run: ./gradlew ktlintCheck
