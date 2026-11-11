@@ -40,6 +40,7 @@ cpn-cli/build/install/cpn-jvm/bin/cpn simulate examples/simple-protocol.json --f
 cpn-cli/build/install/cpn-jvm/bin/cpn simulate corpus/cpnbook/models/chapter2/2-1DeterministicProtocol.cpn --seed 1
 cpn-cli/build/install/cpn-jvm/bin/cpn convert interop/models/hierarchical.cpnd --to cpn -o hierarchical.cpn   # for CPN Tools
 cpn-cli/build/install/cpn-jvm/bin/cpn statespace corpus/cpnbook/models/chapter7/7-2LimitProtocol.cpn   # 13215 nodes
+cpn-cli/build/install/cpn-jvm/bin/cpn statespace corpus/cpnbook/models/chapter7/7-2LimitProtocol.cpn --report   # standard report
 ```
 
 ### The app (desktop and web)

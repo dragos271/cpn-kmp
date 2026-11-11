@@ -1,0 +1,113 @@
+State space report for: 2-1DeterministicProtocol
+
+ Statistics
+------------------------------------------------------------------------
+  State Space
+     Nodes:  31
+     Arcs:   30
+     Secs:   0.01
+     Status: Full
+
+  Scc Graph
+     Nodes:  31
+     Arcs:   30
+
+ Boundedness Properties
+------------------------------------------------------------------------
+  Best Integer Bounds
+                                      Upper     Lower
+     Sequential'Packets To Send 1     6         0
+     Sequential'B 1                   1         0
+     Sequential'Packets Received 1    6         0
+     Sequential'NextSend 1            1         0
+     Sequential'A 1                   1         0
+     Sequential'D 1                   1         0
+     Sequential'C 1                   1         0
+
+  Best Upper Multi-set Bounds
+     Sequential'Packets To Send 1
+         1`(1,"COL ")++
+         1`(2,"OUR")++
+         1`(3,"ED ")++
+         1`(4,"PET")++
+         1`(5,"RI ")++
+         1`(6,"NET")
+     Sequential'B 1
+         1`(1,"COL ")++
+         1`(2,"OUR")++
+         1`(3,"ED ")++
+         1`(4,"PET")++
+         1`(5,"RI ")++
+         1`(6,"NET")
+     Sequential'Packets Received 1
+         1`(1,"COL ")++
+         1`(2,"OUR")++
+         1`(3,"ED ")++
+         1`(4,"PET")++
+         1`(5,"RI ")++
+         1`(6,"NET")
+     Sequential'NextSend 1
+         1`1++
+         1`2++
+         1`3++
+         1`4++
+         1`5++
+         1`6++
+         1`7
+     Sequential'A 1
+         1`(1,"COL ")++
+         1`(2,"OUR")++
+         1`(3,"ED ")++
+         1`(4,"PET")++
+         1`(5,"RI ")++
+         1`(6,"NET")
+     Sequential'D 1
+         1`2++
+         1`3++
+         1`4++
+         1`5++
+         1`6++
+         1`7
+     Sequential'C 1
+         1`2++
+         1`3++
+         1`4++
+         1`5++
+         1`6++
+         1`7
+
+  Best Lower Multi-set Bounds
+     Sequential'Packets To Send 1
+         empty
+     Sequential'B 1
+         empty
+     Sequential'Packets Received 1
+         empty
+     Sequential'NextSend 1
+         empty
+     Sequential'A 1
+         empty
+     Sequential'D 1
+         empty
+     Sequential'C 1
+         empty
+
+ Home Properties
+------------------------------------------------------------------------
+  Home Markings
+     [31]
+
+ Liveness Properties
+------------------------------------------------------------------------
+  Dead Markings
+     [31]
+
+  Dead Transition Instances
+     None
+
+  Live Transition Instances
+     None
+
+ Fairness Properties
+------------------------------------------------------------------------
+     No infinite occurrence sequences.

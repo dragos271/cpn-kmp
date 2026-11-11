@@ -120,6 +120,8 @@ Results on 2026-11-09:
 | M12 | Transition delays are ignored (added with T3.2) | Caught |
 | M13 | The state space never recognises a marking it has seen (added with T3.3) | Caught |
 | M14 | The state space records only one enabled binding per node (added with T3.3) | Caught |
+| M15 | Home markings reported even with several terminal SCCs (added with T3.4) | Caught |
+| M16 | Fairness: a transition counts as impartial whenever it is ever enabled (added with T3.4) | Caught |
 
 M5 and M6 showed real gaps: the whole suite was green with a wrong guard rule. Both now have tests
 in `cpn-lang/.../eval/InscriptionsTest.kt`, and re-running the script reports both as caught. Every

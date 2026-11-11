@@ -40,6 +40,11 @@ M_ALL = [
   "index.getOrPut(marking) {", "index.getOrPut(marking.at(1_000_000L + markings.size)) {", [":cpn-statespace:jvmTest"]),
  ("M14 the state space records only the first enabled binding of a node", "cpn-statespace/src/commonMain/kotlin/no/hvl/cpn/statespace/StateSpace.kt",
   "for (element in enabled) {", "for (element in enabled.take(1)) {", [":cpn-statespace:jvmTest", ":cpn-io:jvmTest"]),
+ ("M15 home markings are reported even with several terminal SCCs", "cpn-statespace/src/commonMain/kotlin/no/hvl/cpn/statespace/StandardReport.kt",
+  "val home = if (terminal.size == 1) nodes.filter { scc.component[it - 1] == terminal.single() } else emptyList()",
+  "val home = nodes.filter { scc.component[it - 1] in terminal }", [":cpn-statespace:jvmTest"]),
+ ("M16 fairness: a transition counts as impartial if any cycle uses it", "cpn-statespace/src/commonMain/kotlin/no/hvl/cpn/statespace/StandardReport.kt",
+  "if (!cycles.hasCycle) return Fairness.IMPARTIAL", "if (!cycles.hasCycle || enabled.any { it }) return Fairness.IMPARTIAL", [":cpn-statespace:jvmTest"]),
 ]
 M = [m for m in M_ALL if only is None or m[0].split()[0] in only]
 results = []

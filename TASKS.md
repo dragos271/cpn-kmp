@@ -187,6 +187,21 @@ The goal is to run real CPN Tools models and produce state-space reports.
   - **Simplification:** markings are stored as objects, not encoded compactly. The limit protocol takes 0.4 s on the
     JVM; compact storage can wait until the benchmarks (T4.4) show it is needed.
 - **T3.4 SCC + standard report.** Tarjan SCC, home markings, dead markings, dead/live transitions, integer/multiset bounds, and fairness. Output matches the CPN Tools "Standard Report" sections.
+  *Status:* done (2026-11-11). `stateSpace.standardReport()` and `cpn statespace model --report` (text or JSON). Example
+  reports are in [docs/reports/](docs/reports/).
+  - **SCCs:** Tarjan's algorithm without recursion, which handles a 200,000-node cycle.
+  - **The report:** CPN Tools' sections (statistics, boundedness, home, liveness, fairness) with its definitions:
+    - home markings are the nodes of the only terminal SCC;
+    - a transition is live if it occurs inside every terminal SCC;
+    - fairness is Impartial, Fair, Just or No Fairness, decided per transition from the cycles that avoid it.
+  - **Checked independently:**
+    - the dining philosophers' whole report, worked out by hand;
+    - one small net per fairness class, built so the answer is known;
+    - the limit protocol's report follows from the model: a limit of 3, the dead marking as the home marking,
+      and Send Packet and Transmit Packet impartial. Its SCC graph has 5,013 nodes.
+  - **Provisional until compared with CPN Tools (T4.2):**
+    - SCC-graph arcs count every state-space arc between different SCCs (my reading of the book's definition);
+    - the report's text layout is close to CPN Tools' but not byte-identical.
 - **T3.5 Model corpus.** Collect `.cpn` models: CPN Tools examples, textbook models and public repos. Record licence and source.
   *Done:* at least 30 models in `corpus/` with a manifest.
   *Status:* done. 49 distinct models from four public collections are in `corpus/`:
@@ -248,10 +263,10 @@ The meeting notes and where each point is handled:
 | Import existing `.cpn` files from the web | T3.5 corpus, T3.1 | Done: 49/49 import, 26/49 run ([results](docs/corpus-results.md)) |
 | Make `.cpn` files from scratch and run them in another CPN tool | T3.1b, F5 | Export done, 5 models in `interop/`; **opening them in CPN Tools is still to do** ([log](docs/interop-log.md)) |
 | Timed nets: token availability, delays, integer time | T3.2, F7 | Done; comparison with CPN Tools traces waits for T4.1 |
-| The report at the end of the earlier work (state-space report) | T3.3, T3.4, F8 | State space done (T3.3); the standard report is T3.4 |
+| The report at the end of the earlier work (state-space report) | T3.3, T3.4, F8 | Done: `cpn statespace --report`; examples in [docs/reports/](docs/reports/) |
 | Document the process, how prompts were used, how AI work is checked, when it is accepted | [ai-process.md](docs/ai-process.md) | Done; kept up to date per task |
 | Play with the green tests | `scripts/mutation-check.py`, ai-process.md §3 | Done: 6 deliberate bugs, 2 survived, tests added |
-| State space analysis | T3.3, T3.4, A7 | `cpn statespace` done (T3.3); SCCs and the report next (T3.4), then the view in the app (A7) |
+| State space analysis | T3.3, T3.4, A7 | Done in the CLI and library (T3.3, T3.4); the view in the app is A7 |
 | Spec-driven development: vision.md, feature-spec.md (DoD, scope) | [vision.md](docs/vision.md), [feature-spec.md](docs/feature-spec.md) | Done |
 
 Order from here: **T3.5** (start the corpus) → **T3.1** import → **T3.1b** export → **T3.1c** round trip →

@@ -188,10 +188,11 @@ Out: symmetry and equivalence reductions, the sweep-line method, and CTL/ASK-CTL
   (golden files, T4.1).
 - The report format follows the CPN Tools section order.
 
-**Status: partial.**
-- The reachability graph and `cpn statespace` are done (T3.3).
-- Sizes are checked independently on three textbook models: the limit protocol has 13,215 nodes and 52,784 arcs.
-- SCCs, the standard report (T3.4) and the view in the app (A7) are next.
+**Status: done in the CLI and library; the app view (A7) and the comparison with CPN Tools (T4.2) remain.**
+- The reachability graph (T3.3) and the standard report with SCCs (T3.4) are done: `cpn statespace --report`.
+- Sizes and report values are checked independently on textbook models: the limit protocol has 13,215 nodes,
+  52,784 arcs and 5,013 SCCs.
+- Example reports are in [reports/](reports/).
 
 ## F9 Python-like inscription syntax
 

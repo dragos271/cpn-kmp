@@ -148,6 +148,17 @@ class CpnCommandTest {
     }
 
     @Test
+    fun printsTheStandardReport() {
+        val text = cpn().test("statespace countdown.cpnd --report")
+        assertEquals(0, text.statusCode, text.stderr)
+        assertTrue(" Home Properties\n" in text.stdout && "     [4]" in text.stdout, text.stdout)
+        assertTrue("No infinite occurrence sequences." in text.stdout, text.stdout)
+        val json = Json.parseToJsonElement(cpn().test("statespace countdown.json --report --format json").stdout).jsonObject
+        assertEquals(4, json["sccNodes"]!!.jsonPrimitive.int)
+        assertEquals("false", json["infiniteOccurrenceSequences"]!!.jsonPrimitive.content)
+    }
+
+    @Test
     fun aPartialStateSpaceExitsWithCode2() {
         val result = cpn().test("statespace countdown.json --max-nodes 2")
         assertEquals(2, result.statusCode)

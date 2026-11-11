@@ -1,0 +1,71 @@
+State space report for: DiningPhilosophers
+
+ Statistics
+------------------------------------------------------------------------
+  State Space
+     Nodes:  11
+     Arcs:   30
+     Secs:   0.013
+     Status: Full
+
+  Scc Graph
+     Nodes:  1
+     Arcs:   0
+
+ Boundedness Properties
+------------------------------------------------------------------------
+  Best Integer Bounds
+                                 Upper     Lower
+     Page'Eat 1                  2         0
+     Page'Think 1                5         3
+     Page'Unused Chopsticks 1    5         1
+
+  Best Upper Multi-set Bounds
+     Page'Eat 1
+         1`ph(1)++
+         1`ph(2)++
+         1`ph(3)++
+         1`ph(4)++
+         1`ph(5)
+     Page'Think 1
+         1`ph(1)++
+         1`ph(2)++
+         1`ph(3)++
+         1`ph(4)++
+         1`ph(5)
+     Page'Unused Chopsticks 1
+         1`cs(1)++
+         1`cs(2)++
+         1`cs(3)++
+         1`cs(4)++
+         1`cs(5)
+
+  Best Lower Multi-set Bounds
+     Page'Eat 1
+         empty
+     Page'Think 1
+         empty
+     Page'Unused Chopsticks 1
+         empty
+
+ Home Properties
+------------------------------------------------------------------------
+  Home Markings
+     [1,2,3,4,5,6,7,8,9,10,11]
+
+ Liveness Properties
+------------------------------------------------------------------------
+  Dead Markings
+     None
+
+  Dead Transition Instances
+     None
+
+  Live Transition Instances
+     Page'Take Chopsticks 1
+     Page'Put Down Chopsticks 1
+
+ Fairness Properties
+------------------------------------------------------------------------
+     Page'Take Chopsticks 1        Impartial
+     Page'Put Down Chopsticks 1    Impartial

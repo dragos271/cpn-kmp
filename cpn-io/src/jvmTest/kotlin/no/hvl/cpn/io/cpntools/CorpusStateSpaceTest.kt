@@ -3,8 +3,11 @@ package no.hvl.cpn.io.cpntools
 import no.hvl.cpn.io.ModelFiles
 import no.hvl.cpn.sim.BindingSearch
 import no.hvl.cpn.sim.Semantics
+import no.hvl.cpn.statespace.Fairness
+import no.hvl.cpn.statespace.IntegerBound
 import no.hvl.cpn.statespace.StateSpace
 import no.hvl.cpn.statespace.StateSpaceStatus
+import no.hvl.cpn.statespace.standardReport
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -59,6 +62,41 @@ class CorpusStateSpaceTest {
                 .single { it.name.startsWith("Protocol'Data Received") }
         assertEquals("1`\"COLOURED PETRI NET\"", ss.marking(dead).tokensOf(received))
         assertConsistent(ss)
+    }
+
+    @Test
+    fun standardReportOfTheDiningPhilosophers() {
+        // Worked out by hand: one SCC; at most 2 eat (4 of 5 chopsticks), at least 3 think; every
+        // marking is a home marking; both transitions live; every cycle both takes and puts down.
+        val r = stateSpace("cpn-js/sample-cpn-models/DiningPhilosophers/DiningPhilosophers.cpn").standardReport()
+        assertEquals(1, r.sccNodes)
+        assertEquals(
+            listOf(IntegerBound("Page'Eat 1", 2, 0), IntegerBound("Page'Think 1", 5, 3), IntegerBound("Page'Unused Chopsticks 1", 5, 1)),
+            r.integerBounds,
+        )
+        assertEquals("1`ph(1)++1`ph(2)++1`ph(3)++1`ph(4)++1`ph(5)", r.multisetBounds.first().upper)
+        assertEquals((1..11).toList(), r.homeMarkings)
+        assertEquals(emptyList(), r.deadTransitions)
+        assertEquals(listOf("Page'Take Chopsticks 1", "Page'Put Down Chopsticks 1"), r.liveTransitions)
+        assertEquals(setOf(Fairness.IMPARTIAL), r.fairness!!.values.toSet())
+    }
+
+    @Test
+    fun standardReportOfTheLimitProtocol() {
+        val r = stateSpace("cpnbook/models/chapter7/7-2LimitProtocol.cpn").standardReport()
+        assertEquals(5013, r.sccNodes)
+        // The dead marking (all data received) is reachable from everywhere.
+        assertEquals(r.deadMarkings, r.homeMarkings)
+        assertEquals(1, r.homeMarkings.size)
+        assertEquals(emptyList(), r.liveTransitions, "there is a dead marking")
+        assertEquals(emptyList(), r.deadTransitions)
+        // At most 3 packets or acknowledgements in the network: the limit.
+        assertEquals(3, r.integerBounds.single { it.place == "Protocol'Limit 1" }.upper)
+        for (place in listOf("A", "B", "C", "D")) assertEquals(3, r.integerBounds.single { it.place == "Protocol'$place 1" }.upper)
+        // Packets can be lost forever, but every infinite run keeps sending and transmitting.
+        val fairness = r.fairness!!
+        assertEquals(Fairness.IMPARTIAL, fairness.getValue("Protocol'Send Packet 1"))
+        assertEquals(Fairness.IMPARTIAL, fairness.getValue("Protocol'Transmit Packet 1"))
     }
 
     /** Every arc is a firing of its source, and every node has an arc for each enabled binding element. */
