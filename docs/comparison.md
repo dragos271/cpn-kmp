@@ -50,8 +50,8 @@ repositories.
 | Headless / CLI | 🟡 via Access/CPN | ✅ | ❌ | ✅ | `cpn simulate` |
 | Timed nets | ✅ | ? | 🟡 `time` text field | ✅ | Integer time: availability, transition and arc delays, `time()`, clock shown in the app |
 | **Analysis** | | | | | |
-| State space | ✅ | ✅ | ❌ | ❌ | Planned (F8) |
-| Standard state-space report | ✅ | ✅ | ❌ | ❌ | Planned (F8) |
+| State space | ✅ | ✅ | ❌ | ✅ | `cpn statespace`: full or partial, limits on nodes, arcs and time; timed nets too |
+| Standard state-space report | ✅ | ✅ | ❌ | 🟡 | Size and dead markings only; the full report is T3.4 |
 | **Files** | | | | | |
 | Reads `.cpn` | ✅ | ✅ | ❌ (future work §7.3) | ✅ | 49/49 corpus models import, 26/49 run ([results](corpus-results.md)) |
 | Writes `.cpn` | ✅ | ❌ | ❌ | ✅ | Unchanged models byte for byte; models made in the app as complete files (not yet opened in CPN Tools) |

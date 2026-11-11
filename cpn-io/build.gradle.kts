@@ -11,8 +11,9 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
         }
         commonTest.dependencies {
-            // Loaded models are checked by simulating them.
+            // Loaded models are checked by simulating them and exploring their state spaces.
             implementation(project(":cpn-sim"))
+            implementation(project(":cpn-statespace"))
         }
     }
 }

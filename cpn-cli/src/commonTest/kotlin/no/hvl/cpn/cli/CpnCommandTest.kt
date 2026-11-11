@@ -135,6 +135,26 @@ class CpnCommandTest {
     }
 
     @Test
+    fun exploresTheStateSpace() {
+        // The countdown from 3: a chain of 4 markings ending in a dead one.
+        val text = cpn().test("statespace countdown.cpnd")
+        assertEquals(0, text.statusCode, text.stderr)
+        assertTrue("Status: Full" in text.stdout, text.stdout)
+        assertTrue("Nodes:  4" in text.stdout && "Arcs:   3" in text.stdout, text.stdout)
+        assertTrue("Dead markings: 1 [4]" in text.stdout, text.stdout)
+        val json = Json.parseToJsonElement(cpn().test("statespace countdown.json --format json").stdout).jsonObject
+        assertEquals(4, json["nodes"]!!.jsonPrimitive.int)
+        assertEquals("Full", json["status"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun aPartialStateSpaceExitsWithCode2() {
+        val result = cpn().test("statespace countdown.json --max-nodes 2")
+        assertEquals(2, result.statusCode)
+        assertTrue("Status: Partial" in result.stdout, result.stdout)
+    }
+
+    @Test
     fun reportsExceptionsRaisedByInscriptions() {
         val result = cpn().test("simulate divide.cpnd --seed 7")
         assertEquals(1, result.statusCode)

@@ -118,6 +118,8 @@ Results on 2026-11-09:
 | M10 | The `.cpn` exporter writes `portsock` pairs the wrong way round (added with T3.1b) | Caught |
 | M11 | Timed tokens count as available before their timestamp (added with T3.2) | Caught |
 | M12 | Transition delays are ignored (added with T3.2) | Caught |
+| M13 | The state space never recognises a marking it has seen (added with T3.3) | Caught |
+| M14 | The state space records only one enabled binding per node (added with T3.3) | Caught |
 
 M5 and M6 showed real gaps: the whole suite was green with a wrong guard rule. Both now have tests
 in `cpn-lang/.../eval/InscriptionsTest.kt`, and re-running the script reports both as caught. Every

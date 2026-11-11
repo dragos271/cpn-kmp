@@ -3,6 +3,8 @@ package no.hvl.cpn.io.model
 import no.hvl.cpn.core.ArcDirection
 import no.hvl.cpn.sim.Simulator
 import no.hvl.cpn.sim.StopReason
+import no.hvl.cpn.statespace.StateSpace
+import no.hvl.cpn.statespace.StateSpaceStatus
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -73,6 +75,17 @@ class TimedNetTest {
         assertEquals("1`1@10", result.marking.tokensOf(places.getValue("Out")), "5 + transition delay 3 + arc delay 2")
         assertEquals("1`5", result.marking.tokensOf(places.getValue("Log")), "time() is the model time; untimed places have no timestamps")
         assertEquals(8, result.marking.time)
+    }
+
+    @Test
+    fun theTimedStateSpaceIncludesTheClock() {
+        // Worked out by hand: Count at 0, wait until 4, Count at 4, Go at 5, Count at 8, then dead.
+        val ss = StateSpace.build(assertNotNull(document.compile().net))
+        assertEquals(StateSpaceStatus.FULL, ss.status)
+        assertEquals(5, ss.nodeCount)
+        assertEquals(4, ss.arcCount)
+        assertEquals(listOf(5), ss.deadMarkings)
+        assertEquals(listOf(0L, 0L, 4L, 5L, 8L), ss.nodes.map { ss.marking(it).time })
     }
 
     @Test

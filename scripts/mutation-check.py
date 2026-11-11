@@ -36,6 +36,10 @@ M_ALL = [
   "if (place.timed) time = maxOf(time, marking.timed(place).earliest(tokens) ?: return null)", "if (place.timed) marking.timed(place).earliest(tokens) ?: return null", [":cpn-io:jvmTest"]),
  ("M12 transition delays (time regions) are ignored", "cpn-sim/src/commonMain/kotlin/no/hvl/cpn/sim/Semantics.kt",
   "val delay = transition.delay.evaluate(binding)", "val delay = 0L", [":cpn-io:jvmTest"]),
+ ("M13 the state space never recognises a marking it has seen", "cpn-statespace/src/commonMain/kotlin/no/hvl/cpn/statespace/StateSpace.kt",
+  "index.getOrPut(marking) {", "index.getOrPut(marking.at(1_000_000L + markings.size)) {", [":cpn-statespace:jvmTest"]),
+ ("M14 the state space records only the first enabled binding of a node", "cpn-statespace/src/commonMain/kotlin/no/hvl/cpn/statespace/StateSpace.kt",
+  "for (element in enabled) {", "for (element in enabled.take(1)) {", [":cpn-statespace:jvmTest", ":cpn-io:jvmTest"]),
 ]
 M = [m for m in M_ALL if only is None or m[0].split()[0] in only]
 results = []
