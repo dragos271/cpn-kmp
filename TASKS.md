@@ -119,7 +119,7 @@ The goal is to run real CPN Tools models and produce state-space reports.
   - **XML:** a small reader in common code (D7).
   - **Corpus gaps fixed along the way:** standard colour sets declared again, declarations in dependency order,
     unbracketed guard lists, `x::xs` and summed patterns, I/O sockets with two arcs, CPN Tools' list library.
-  - **Biggest remaining gap:** in CPN Tools `'a ms` *is* `'a list` (9 models). That is T2.10.
+  - **Biggest remaining gap was** that in CPN Tools `'a ms` *is* `'a list` (9 models): fixed in T2.10, so 35/49 run.
   - **Layout (2026-11-11):** node sizes, bend points and every label position are imported, and the app draws labels
     where CPN Tools does, with all their lines. Before, it guessed the positions and cut text to one line, which made
     the book's models unreadable. Labels move with their nodes, and moved labels are written back on export.
@@ -127,6 +127,14 @@ The goal is to run real CPN Tools models and produce state-space reports.
   colour set `mult` and `sort_ms`, and decide on `real` equality and per-declaration checking (an unused broken
   declaration does not block a model in CPN Tools).
   *Done:* the corresponding corpus models in docs/corpus-results.md run.
+  *Status:* done (2026-11-11), except two decisions left open: `real` equality, and CPN Tools' per-declaration checking.
+  - **Results:** **35 of 49 corpus models now run** (from 26).
+  - **Multisets are lists:** `ms` and `list` are one type in the type checker. At runtime, list functions accept
+    multisets and multiset functions accept lists. At a place, a list is one token if the place holds such lists,
+    and otherwise a multiset of its elements, as the type checker decided.
+  - **New functions:** colour set `mult` (products) and `sort_ms`.
+  - **One mistake gives one problem:** a declaration that fails no longer causes follow-on errors from its later
+    uses, from colour sets built on it, or from colour sets that need values.
 - **T3.1b .cpn export.** Write documents as CPN Tools 4.x XML, including models made from scratch in the app (F5).
   *Done:* exported files have the CPN Tools structure (automated), and five models made from scratch open and run in
   CPN Tools, recorded in `docs/interop-log.md`.
@@ -263,7 +271,7 @@ The meeting notes and where each point is handled:
 |---|---|---|
 | Run the earlier tool and compare features (supported / not supported) | [comparison.md](docs/comparison.md) | Matrix done from the theses. Running them needs access: Gjesdal's editor repo is private and Garvik's F# simulator is not public |
 | Stable under repeated import/export (important) | T3.1c, F6 | Done: unchanged `.cpn` files come back byte for byte (49/49); 500 random nets and 5-cycle fixed point in CI |
-| Import existing `.cpn` files from the web | T3.5 corpus, T3.1 | Done: 49/49 import, 26/49 run ([results](docs/corpus-results.md)) |
+| Import existing `.cpn` files from the web | T3.5 corpus, T3.1 | Done: 49/49 import, 35/49 run ([results](docs/corpus-results.md)) |
 | Make `.cpn` files from scratch and run them in another CPN tool | T3.1b, F5 | Export done, 5 models in `interop/`; **opening them in CPN Tools is still to do** ([log](docs/interop-log.md)) |
 | Timed nets: token availability, delays, integer time | T3.2, F7 | Done; comparison with CPN Tools traces waits for T4.1 |
 | The report at the end of the earlier work (state-space report) | T3.3, T3.4, F8 | Done: `cpn statespace --report`; examples in [docs/reports/](docs/reports/) |

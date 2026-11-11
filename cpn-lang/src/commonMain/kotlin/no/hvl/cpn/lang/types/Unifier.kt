@@ -33,7 +33,7 @@ internal class Unifier(
             x is TypeVar -> bind(x, y)
             y is TypeVar -> bind(y, x)
             x is TypeCon && y is TypeCon -> {
-                if (x.name != y.name || x.args.size != y.args.size) throw UnifyException(null)
+                if (canonical(x.name) != canonical(y.name) || x.args.size != y.args.size) throw UnifyException(null)
                 x.args.zip(y.args).forEach { (p, q) -> unify(p, q) }
             }
             x is RecordType && y is RecordType -> {
@@ -45,6 +45,52 @@ internal class Unifier(
                 unify(x.result, y.result)
             }
             else -> throw UnifyException(null)
+        }
+    }
+
+    /**
+     * Unifies [a] and [b] if possible; if not, leaves every type variable as it was and returns false.
+     * Used to try one reading of an inscription before another.
+     */
+    fun tryUnify(
+        a: Type,
+        b: Type,
+    ): Boolean {
+        val vars = LinkedHashSet<TypeVar>()
+        collectVars(a, vars)
+        collectVars(b, vars)
+        val saved = vars.map { Triple(it, it.instance, it.kind) to it.level }
+        return try {
+            unify(a, b)
+            true
+        } catch (e: UnifyException) {
+            for ((state, level) in saved) {
+                val (v, instance, kind) = state
+                v.instance = instance
+                v.kind = kind
+                v.level = level
+            }
+            false
+        }
+    }
+
+    /** Every type variable in [type], following bound variables and flexible-record fields: all that [unify] can change. */
+    private fun collectVars(
+        type: Type,
+        into: MutableSet<TypeVar>,
+    ) {
+        when (type) {
+            is TypeVar -> {
+                if (!into.add(type)) return
+                type.instance?.let { collectVars(it, into) }
+                (type.kind as? Kind.FlexRecord)?.fields?.values?.forEach { collectVars(it, into) }
+            }
+            is TypeCon -> type.args.forEach { collectVars(it, into) }
+            is RecordType -> type.fields.values.forEach { collectVars(it, into) }
+            is FunType -> {
+                collectVars(type.param, into)
+                collectVars(type.result, into)
+            }
         }
     }
 
@@ -226,3 +272,6 @@ internal class Unifier(
         }
     }
 }
+
+/** In CPN Tools a multiset is a list (`type 'a ms = 'a list`), so `ms` and `list` are one type constructor. */
+internal fun canonical(name: String): String = if (name == "ms") "list" else name

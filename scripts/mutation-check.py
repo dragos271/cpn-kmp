@@ -45,6 +45,12 @@ M_ALL = [
   "val home = nodes.filter { scc.component[it - 1] in terminal }", [":cpn-statespace:jvmTest"]),
  ("M16 fairness: a transition counts as impartial if any cycle uses it", "cpn-statespace/src/commonMain/kotlin/no/hvl/cpn/statespace/StandardReport.kt",
   "if (!cycles.hasCycle) return Fairness.IMPARTIAL", "if (!cycles.hasCycle || enabled.any { it }) return Fairness.IMPARTIAL", [":cpn-statespace:jvmTest"]),
+ ("M17 multisets are not lists in the type checker", "cpn-lang/src/commonMain/kotlin/no/hvl/cpn/lang/types/Unifier.kt",
+  'internal fun canonical(name: String): String = if (name == "ms") "list" else name', "internal fun canonical(name: String): String = name", [":cpn-lang:jvmTest"]),
+ ("M18 a list on a list place is read as a multiset of its elements", "cpn-lang/src/commonMain/kotlin/no/hvl/cpn/lang/eval/Inscriptions.kt",
+  """    ): Multiset<Any?> =
+        if (value is List<*> && conform(value, colourSet) in colourSet) {""", """    ): Multiset<Any?> =
+        if (false) {""", [":cpn-lang:jvmTest"]),
 ]
 M = [m for m in M_ALL if only is None or m[0].split()[0] in only]
 results = []

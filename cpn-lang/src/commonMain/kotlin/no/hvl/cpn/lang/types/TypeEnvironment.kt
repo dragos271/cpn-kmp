@@ -289,6 +289,7 @@ internal object Basis {
         ext_col : ('a -> 'b) -> 'a ms -> 'b ms
         ms_to_col : 'a ms -> 'a
         list_to_ms : 'a list -> 'a ms
+        sort_ms : ('a * 'a -> bool) -> 'a ms -> 'a ms
         ms_to_list : 'a ms -> 'a list
         @+ : 'a * int -> 'a
         time : unit -> int

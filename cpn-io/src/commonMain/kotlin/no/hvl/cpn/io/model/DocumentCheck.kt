@@ -73,16 +73,29 @@ public fun CpnDocument.check(): List<Problem> {
                 problems += Problem(null, ProblemField.DECLARATIONS, e.message ?: "uncaught exception")
             }
         }
+        // With type errors the declarations cannot run, so colour sets are built from constants only.
+        // One that needs a value (`1..n`) or has a type error is just not built, and neither is any
+        // colour set built on it: those are not problems of their own, and one mistake gives one error.
         val colourSets = ColourSetEnvironment.standard(source = declarationsSource)
+        val unbuilt = mutableSetOf<String>()
         for (decl in parsed.declarations.filterIsInstance<ColsetDecl>()) {
             if (typeErrors.isEmpty()) break
-            if (typeErrors.any { it.span.start in decl.span.start until decl.span.end }) continue
+            val name = decl.name.name
+            if (typeErrors.any { it.span.start in decl.span.start until decl.span.end }) {
+                unbuilt += name
+                continue
+            }
             try {
                 colourSets.declare(decl)
             } catch (e: ColsetDeclarationException) {
-                problems += Problem(null, ProblemField.DECLARATIONS, located(declarationsSource, decl.span, e.reason))
+                val missing = e.reason.removePrefix("unknown colour set ").takeIf { it != e.reason }
+                if (!e.reason.startsWith("only constants are supported") && missing !in unbuilt) {
+                    problems += Problem(null, ProblemField.DECLARATIONS, located(declarationsSource, decl.span, e.reason))
+                }
+                unbuilt += name
             } catch (e: IllegalArgumentException) {
                 // A colour set this one builds on was not built; that problem is already reported.
+                unbuilt += name
             }
         }
     }

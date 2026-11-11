@@ -2,6 +2,7 @@ package no.hvl.cpn.lang.eval
 
 import no.hvl.cpn.core.Multiset
 import no.hvl.cpn.core.TimedMultiset
+import no.hvl.cpn.core.toMultiset
 import no.hvl.cpn.lang.ast.SourceText
 import no.hvl.cpn.lang.ast.Span
 import no.hvl.cpn.lang.value.MlCon
@@ -118,14 +119,17 @@ internal class DataConstructor(
 
 /** `::` on Kotlin lists. */
 internal object ConsConstructor : Constructor("::"), MlFunction2 {
-    override fun destruct(value: Any?): Any? =
-        if (value is List<*> && value.isNotEmpty()) MlTuple(listOf(value.first(), value.subList(1, value.size))) else NO_MATCH
+    override fun destruct(value: Any?): Any? {
+        // Multisets are lists in CPN Tools, so `x::xs` also takes a multiset apart.
+        val list = if (value is List<*> || value is Multiset<*>) asList(value) else return NO_MATCH
+        return if (list.isNotEmpty()) MlTuple(listOf(list.first(), list.subList(1, list.size))) else NO_MATCH
+    }
 
     override fun apply2(
         left: Any?,
         right: Any?,
     ): Any? {
-        val tail = right as List<*>
+        val tail = asList(right)
         return ArrayList<Any?>(tail.size + 1).apply {
             add(left)
             addAll(tail)
@@ -162,6 +166,8 @@ internal fun valuesEqual(
         a is MlRecord && b is MlRecord -> a.fields.keys == b.fields.keys && a.fields.all { (k, v) -> valuesEqual(v, b.fields[k]) }
         a is MlCon && b is MlCon -> a.name == b.name && a.hasArgument == b.hasArgument && valuesEqual(a.argument, b.argument)
         a is List<*> && b is List<*> -> a.size == b.size && a.indices.all { valuesEqual(a[it], b[it]) }
+        // A multiset and a list (CPN Tools: `'a ms = 'a list`) are equal when they hold the same elements.
+        (a is Multiset<*> && b is List<*>) || (a is List<*> && b is Multiset<*>) -> toMultiset(a) == toMultiset(b)
         else -> a == b
     }
 
@@ -179,13 +185,27 @@ internal fun compareValues(
         else -> throw IllegalArgumentException("cannot compare ${formatValue(a)} and ${formatValue(b)}")
     }
 
-/** A multiset, or a single colour as shorthand for one token of it (CPN ML arc inscriptions); delays (`@+`) are dropped. */
+/**
+ * A multiset; a list as the multiset of its elements (in CPN Tools `'a ms` is `'a list`); or a single
+ * colour as shorthand for one token of it. Delays (`@+`) are dropped. Where a list may instead be one
+ * token of a place holding lists, use [CpnMlInscriptions]' place-aware conversion.
+ */
 @Suppress("UNCHECKED_CAST")
 internal fun toMultiset(value: Any?): Multiset<Any?> =
     when (value) {
         is Multiset<*> -> value as Multiset<Any?>
         is TimedMultiset<*> -> (value as TimedMultiset<Any?>).untimed
+        is List<*> -> (value as List<Any?>).toMultiset()
         else -> Multiset.repeated(value, 1)
+    }
+
+/** A list, or a multiset as the list of its tokens (each colour repeated by its count, in a fixed order). */
+@Suppress("UNCHECKED_CAST")
+internal fun asList(value: Any?): List<Any?> =
+    when (value) {
+        is List<*> -> value as List<Any?>
+        is Multiset<*> -> (value as Multiset<Any?>).entries().flatMap { (colour, n) -> List(n) { colour } }
+        else -> throw IllegalArgumentException("expected a list or a multiset, found ${formatValue(value)}")
     }
 
 /** [toMultiset] with delays: what `x @+ d` and sums of such produce; untimed values have delay 0. */

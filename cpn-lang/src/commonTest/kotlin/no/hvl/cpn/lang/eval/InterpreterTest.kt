@@ -176,6 +176,20 @@ class InterpreterTest {
     }
 
     @Test
+    fun multisetsAreLists() {
+        // In CPN Tools `'a ms` is `'a list`: list functions take multisets, multiset functions take lists.
+        val declarations = "colset NO = int with 1..3; colset PR = product NO * NO;"
+        assertEquals("[2,4,6]", eval("List.map (fn x => 2 * x) (NO.all ())", declarations))
+        assertEquals("(3,1)", eval("(length (2`1 ++ 1`2), hd (2`1 ++ 1`2))"))
+        assertEquals("2", eval("size [1, 2]"))
+        assertEquals("5", eval("case 1`5 of [x] => x | _ => 0"))
+        assertEquals("true", eval("1`1 ++ 1`2 = [2, 1]"), "equal as multisets")
+        assertEquals("[3,2,1]", eval("sort_ms (fn (a, b) => a > b) (1`2 ++ 1`3 ++ 1`1)"))
+        assertEquals("1`(1,2)++1`(1,3)", eval("PR.mult (1`1, 1`2 ++ 1`3)", declarations))
+        assertEquals("2`(1,1)", eval("PR.mult (2`1, 1`1)", declarations), "counts multiply")
+    }
+
+    @Test
     fun delaysAndTheModelTime() {
         assertEquals("1`5@3+++1`6@0", eval("1`5 @+ 3 ++ 1`6"), "@+ binds tighter than ++")
         assertEquals("2`7@4", eval("(2`7 @+ 1) @+ 3"))

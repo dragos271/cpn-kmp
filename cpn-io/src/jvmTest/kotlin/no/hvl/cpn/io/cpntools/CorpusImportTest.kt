@@ -224,6 +224,6 @@ class CorpusImportTest {
         const val STEPS = 200
 
         /** Raised as the importer and engine improve; never lowered without a reason in TASKS.md. */
-        const val MIN_RUNNING = 26
+        const val MIN_RUNNING = 35
     }
 }

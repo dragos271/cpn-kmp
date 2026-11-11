@@ -70,6 +70,7 @@ import no.hvl.cpn.lang.ast.VarDecl
 import no.hvl.cpn.lang.ast.WhileExpr
 import no.hvl.cpn.lang.ast.WildcardPat
 import no.hvl.cpn.lang.ast.at
+import no.hvl.cpn.lang.ast.descendants
 
 /** A type error, located in its source. */
 public class TypeError(
@@ -111,10 +112,31 @@ public class TypeChecker(
                 defaultOverloadsIn(environment)
             } catch (e: TypeError) {
                 errors += e.located()
+                // Declare its names with an unknown type, so their later uses are not reported as well:
+                // one mistake gives one error.
+                for (name in declaredNames(decl)) {
+                    val v = unifier.fresh(1)
+                    environment = environment.withValue(name, ValueBinding(Scheme(listOf(v), v), ValueKind.VALUE))
+                }
             }
         }
         return errors
     }
+
+    /** The values a `val` or `fun` declaration binds (constructors in its patterns excluded). */
+    private fun declaredNames(decl: Decl): List<String> =
+        when (decl) {
+            is FunDecl -> decl.bindings.map { it.name.name }
+            is ValDecl ->
+                decl.bindings.flatMap { bind ->
+                    (sequenceOf(bind.pattern) + bind.pattern.descendants())
+                        .filterIsInstance<IdentPat>()
+                        .filter { it.name.qualifiers.isEmpty() && environment.values[it.name.name]?.kind != ValueKind.CONSTRUCTOR }
+                        .map { it.name.name }
+                        .toList()
+                }
+            else -> emptyList()
+        }
 
     /** The type of [expr] in [environment]. @throws TypeError */
     public fun typeOf(
@@ -179,9 +201,11 @@ public class TypeChecker(
             val colour = environment.colourSet(colourSet) ?: throw TypeError(expr.span, "unknown colour set $colourSet")
             val type = prune(expression(expr, environment))
             // A single colour is shorthand for 1`colour; an undetermined type (e.g. `empty`) is taken as a multiset.
+            // Multisets are lists (CPN Tools), so a list is a single token if the place holds lists of that
+            // type, and otherwise a multiset of its elements.
             val element =
                 when {
-                    type is TypeCon && type.name == "ms" -> type.args.single()
+                    type is TypeCon && canonical(type.name) == "list" -> if (unifier.tryUnify(type, colour)) type else type.args.single()
                     type is TypeVar -> fresh().also { unifier.unify(type, multisetType(it)) }
                     else -> type
                 }
@@ -401,6 +425,12 @@ public class TypeChecker(
             "mkstr" -> FunType(colour, STRING)
             "mkstr_ms" -> FunType(multisetType(colour), STRING)
             "legal" -> FunType(fresh(), BOOL)
+            // Products: the multiset of all combinations, `PR.mult (ms1, ms2)` (CPN Tools).
+            "mult" -> {
+                val components =
+                    (prune(colour) as? RecordType)?.fields?.takeIf { f -> f.keys.all { it.toIntOrNull() != null } } ?: return null
+                FunType(RecordType(components.mapValues { multisetType(it.value) }), multisetType(colour))
+            }
             else -> null
         }
     }

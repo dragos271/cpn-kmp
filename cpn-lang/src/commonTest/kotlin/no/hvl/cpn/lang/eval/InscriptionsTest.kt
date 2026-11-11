@@ -3,6 +3,7 @@ package no.hvl.cpn.lang.eval
 import no.hvl.cpn.core.Binding
 import no.hvl.cpn.lang.ast.SourceText
 import no.hvl.cpn.lang.parse.CpnMlParser
+import no.hvl.cpn.lang.value.formatValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -28,6 +29,16 @@ class InscriptionsTest {
         assertFalse(guard.evaluate(Binding.of(n to 1)), "n > 1 fails")
         assertTrue(guard.evaluate(Binding.of(n to 2)))
         assertFalse(guard.evaluate(Binding.of(n to 5)), "n < 4 fails")
+    }
+
+    @Test
+    fun aListIsOneTokenOnAListPlaceAndAMultisetElsewhere() {
+        val inscriptions = inscriptions("colset NO = int; colset NOS = list NO;")
+        val no = inscriptions.interpreter.colourSets["NO"]!!
+        val nos = inscriptions.interpreter.colourSets["NOS"]!!
+        val list = parser.parseExpression(SourceText("m", "[1, 2, 2]"))
+        assertEquals("1`[1,2,2]", inscriptions.multiset(list, nos).format(element = ::formatValue), "a token of NOS")
+        assertEquals("1`1++2`2", inscriptions.multiset(list, no).format(element = ::formatValue), "three tokens of NO")
     }
 
     @Test

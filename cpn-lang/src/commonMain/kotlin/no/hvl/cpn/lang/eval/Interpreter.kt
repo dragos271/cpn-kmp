@@ -1,5 +1,6 @@
 package no.hvl.cpn.lang.eval
 
+import no.hvl.cpn.core.Multiset
 import no.hvl.cpn.lang.ast.AndAlsoExpr
 import no.hvl.cpn.lang.ast.AppExpr
 import no.hvl.cpn.lang.ast.AsPat
@@ -61,6 +62,7 @@ import no.hvl.cpn.lang.colour.ColsetEvaluator
 import no.hvl.cpn.lang.colour.CpnColourSet
 import no.hvl.cpn.lang.colour.EnumColourSet
 import no.hvl.cpn.lang.colour.IndexColourSet
+import no.hvl.cpn.lang.colour.ProductColourSet
 import no.hvl.cpn.lang.colour.TimedColourSet
 import no.hvl.cpn.lang.colour.UnionColourSet
 import no.hvl.cpn.lang.colour.UnitColourSet
@@ -364,9 +366,29 @@ public class Interpreter(
             "mkstr" -> fn { cs.mkstr(it) }
             "mkstr_ms" -> fn { cs.mkstrMs(toMultiset(it)) }
             "legal" -> fn { cs.legal(it) }
+            "mult" ->
+                if (cs.underlying() !is ProductColourSet) {
+                    null
+                } else {
+                    fn { arg ->
+                        // Every combination of one token from each component, counts multiplied.
+                        val parts = (arg as MlTuple).elements.map { toMultiset(it).entries().map { (c, n) -> c to n } }
+                        var combos = listOf(emptyList<Any?>() to 1)
+                        for (part in parts) combos = combos.flatMap { (prefix, n) -> part.map { (c, k) -> (prefix + c) to n * k } }
+                        Multiset.fromCounts(combos.groupingBy { MlTuple(it.first) }.fold(0) { acc, e -> acc + e.second })
+                    }
+                }
             else -> null
         }
     }
+
+    /** The colour set an alias or a timed colour set stands for. */
+    private fun CpnColourSet.underlying(): CpnColourSet =
+        when (this) {
+            is AliasColourSet -> target.underlying()
+            is TimedColourSet -> untimed.underlying()
+            else -> this
+        }
 
     /** Applies the first rule whose pattern matches [value]; [otherwise] when none does. */
     private inline fun matchRules(
@@ -463,7 +485,8 @@ public class Interpreter(
                     match(field.pattern, fieldValue, env, bound)
                 }
             is ListPat -> {
-                val list = value as List<*>
+                if (value !is List<*> && value !is Multiset<*>) return false
+                val list = asList(value)
                 list.size == p.elements.size && p.elements.indices.all { match(p.elements[it], list[it], env, bound) }
             }
             is ConPat -> {

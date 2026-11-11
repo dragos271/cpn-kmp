@@ -282,6 +282,17 @@ internal object Library {
         v["filter"] = curried { p, ms -> toMultiset(ms).filter { interpreter.call(p, it) as Boolean } }
         v["ext_col"] = curried { f, ms -> toMultiset(ms).map { interpreter.call(f, it) } }
         v["list_to_ms"] = fn { l -> list(l).fold(Multiset.empty<Any?>()) { ms, x -> ms + Multiset.repeated(x, 1) } }
+        // Sorted by a "less than" function: as a list, which a multiset is in CPN Tools.
+        v["sort_ms"] =
+            curried { less, ms ->
+                asList(ms).sortedWith { a, b ->
+                    when {
+                        interpreter.call(less, MlTuple(listOf(a, b))) as Boolean -> -1
+                        interpreter.call(less, MlTuple(listOf(b, a))) as Boolean -> 1
+                        else -> 0
+                    }
+                }
+            }
         v["ms_to_list"] = fn { ms -> toMultiset(ms).entries().flatMap { (colour, n) -> List(n) { colour } } }
         v["ms_to_col"] =
             fn {
@@ -339,7 +350,8 @@ internal object Library {
         b: Any?,
     ) = MlTuple(listOf(a, b))
 
-    private fun list(value: Any?): List<Any?> = value as List<Any?>
+    /** Lists, and multisets as lists (CPN Tools: `'a ms = 'a list`). */
+    private fun list(value: Any?): List<Any?> = asList(value)
 
     /** `int` values are Ints (D8): the time as one while it fits. */
     private fun modelTime(interpreter: Interpreter): Any =

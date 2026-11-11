@@ -122,6 +122,8 @@ Results on 2026-11-09:
 | M14 | The state space records only one enabled binding per node (added with T3.3) | Caught |
 | M15 | Home markings reported even with several terminal SCCs (added with T3.4) | Caught |
 | M16 | Fairness: a transition counts as impartial whenever it is ever enabled (added with T3.4) | Caught |
+| M17 | Multisets are not lists in the type checker (added with T2.10) | Caught |
+| M18 | A list on a list place is read as a multiset of its elements (added with T2.10) | Caught |
 
 M5 and M6 showed real gaps: the whole suite was green with a wrong guard rule. Both now have tests
 in `cpn-lang/.../eval/InscriptionsTest.kt`, and re-running the script reports both as caught. Every

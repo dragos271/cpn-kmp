@@ -53,7 +53,7 @@ repositories.
 | State space | ✅ | ✅ | ❌ | ✅ | `cpn statespace`: full or partial, limits on nodes, arcs and time; timed nets too |
 | Standard state-space report | ✅ | ✅ | ❌ | ✅ | `cpn statespace --report`: bounds, home, liveness, fairness ([examples](reports/)) |
 | **Files** | | | | | |
-| Reads `.cpn` | ✅ | ✅ | ❌ (future work §7.3) | ✅ | 49/49 corpus models import, 26/49 run ([results](corpus-results.md)) |
+| Reads `.cpn` | ✅ | ✅ | ❌ (future work §7.3) | ✅ | 49/49 corpus models import, 35/49 run ([results](corpus-results.md)) |
 | Writes `.cpn` | ✅ | ❌ | ❌ | ✅ | Unchanged models byte for byte; models made in the app as complete files (not yet opened in CPN Tools) |
 | Own JSON format | ❌ | ❌ | ✅ GoJS model JSON | ✅ | Documented in json-format.md |
 | Stable under repeated save/open | ✅ | n/a | ❌ known bugs: sizes and arc ports lost on reload (§7.3.1–7.3.2) | ✅ | Tested in CI: 49 corpus models and 500 random nets, 5-cycle fixed point |

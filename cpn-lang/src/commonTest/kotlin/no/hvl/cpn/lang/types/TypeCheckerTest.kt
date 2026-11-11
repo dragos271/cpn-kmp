@@ -2,6 +2,7 @@ package no.hvl.cpn.lang.types
 
 import no.hvl.cpn.lang.ast.SourceText
 import no.hvl.cpn.lang.parse.CpnMlParser
+import no.hvl.cpn.lang.parse.parseCpnMl
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -278,5 +279,21 @@ class TypeCheckerTest {
         assertTrue(errors[1].startsWith("d:3:9: operator + cannot be applied to int and string"), errors[1])
         assertEquals("d:4:25: the subset predicate must have type int -> bool, not int -> int", errors[2])
         assertEquals("d:5:1: use \"lib.sml\" is not supported: put the declarations in the model", errors[3])
+    }
+
+    @Test
+    fun multisetsAndListsAreTheSameType() {
+        assertEquals("int list", typeOf("List.map (fn x => x + 1) (1`1 ++ 1`2)"))
+        assertEquals(
+            emptyList(),
+            TypeChecker().checkDeclarations(parseCpnMl("val s = size [1, 2]; fun f (m : int ms) = hd m;")).map { it.message },
+        )
+    }
+
+    @Test
+    fun oneMistakeGivesOneError() {
+        // f has a type error; its later uses would be reported too without recovery.
+        val errors = TypeChecker().checkDeclarations(parseCpnMl("fun f x = x + \"a\"; val a = f 1; val b = f 2;"))
+        assertEquals(1, errors.size, errors.map { it.message }.toString())
     }
 }

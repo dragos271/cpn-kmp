@@ -108,14 +108,14 @@ public class CpnMlInscriptions(
         expr: Expr,
         colourSet: CpnColourSet,
         source: SourceText? = null,
-    ): Multiset<Any?> = conform(toMultiset(interpreter.evaluate(expr, emptyMap(), source)), colourSet)
+    ): Multiset<Any?> = tokens(interpreter.evaluate(expr, emptyMap(), source), colourSet)
 
     /** The initial marking of a timed place: tokens at time 0, or later with `@+` (``1`x@+5``). */
     public fun timedMultiset(
         expr: Expr,
         colourSet: CpnColourSet,
         source: SourceText? = null,
-    ): TimedMultiset<Any?> = toTimed(interpreter.evaluate(expr, emptyMap(), source)).map { conform(it, colourSet) }
+    ): TimedMultiset<Any?> = timedTokens(interpreter.evaluate(expr, emptyMap(), source), colourSet)
 
     /** A transition's time region `@+expr` given as [expr] (the expression after `@+`). */
     public fun delay(
@@ -146,10 +146,10 @@ public class CpnMlInscriptions(
         val source: SourceText?,
     ) : ArcInscription<Any?> {
         override fun evaluate(binding: Binding): Multiset<Any?> =
-            conform(toMultiset(interpreter.evaluate(expr, values(variables, binding), source)), colourSet)
+            tokens(interpreter.evaluate(expr, values(variables, binding), source), colourSet)
 
         override fun evaluateTimed(binding: Binding): TimedMultiset<Any?> =
-            toTimed(interpreter.evaluate(expr, values(variables, binding), source)).map { conform(it, colourSet) }
+            timedTokens(interpreter.evaluate(expr, values(variables, binding), source), colourSet)
 
         override fun toString(): String = source?.text ?: expr.toString()
     }
@@ -268,6 +268,31 @@ public class CpnMlInscriptions(
         }
 
     private fun isCons(e: InfixExpr) = e.operator.text == "::" && e.operator.qualifiers.isEmpty()
+
+    /**
+     * The tokens an inscription's value puts on a place of [colourSet]. A list is one token if the place
+     * holds such lists (a list colour set), and otherwise a multiset of its elements, as the type
+     * checker decided (in CPN Tools `'a ms` is `'a list`).
+     */
+    private fun tokens(
+        value: Any?,
+        colourSet: CpnColourSet,
+    ): Multiset<Any?> =
+        if (value is List<*> && conform(value, colourSet) in colourSet) {
+            Multiset.repeated(conform(value, colourSet), 1)
+        } else {
+            conform(toMultiset(value), colourSet)
+        }
+
+    private fun timedTokens(
+        value: Any?,
+        colourSet: CpnColourSet,
+    ): TimedMultiset<Any?> =
+        if (value is List<*> && conform(value, colourSet) in colourSet) {
+            TimedMultiset.of(conform(value, colourSet), 1, 0)
+        } else {
+            toTimed(value).map { conform(it, colourSet) }
+        }
 
     private fun values(
         variables: Set<Variable<*>>,
