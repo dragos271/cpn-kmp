@@ -89,6 +89,97 @@ class CorpusImportTest {
         }
     }
 
+    @Test
+    fun theLayoutComesFromTheFile() {
+        // The values in the book's .cpn file (y negated: CPN Tools' y axis points up).
+        val bytes = File(corpus, "cpnbook/models/chapter10/10-1TimedProtocol.cpn").readBytes()
+        val document = ModelFiles.open(bytes, "TimedProtocol").document
+        val page = document.pages.single()
+        val packets = page.place("ID1784")!!
+        assertEquals(
+            no.hvl.cpn.io.model
+                .Size(78.0, 44.0),
+            packets.size,
+        )
+        assertEquals(
+            no.hvl.cpn.io.model
+                .Point(94.0, -58.0),
+            packets.colourSetLabel,
+        )
+        assertEquals(
+            no.hvl.cpn.io.model
+                .Point(91.5, -109.0),
+            packets.markingLabel,
+        )
+        val send = page.transition("ID1794")!!
+        assertEquals(
+            no.hvl.cpn.io.model
+                .Size(70.0, 39.0),
+            send.size,
+        )
+        assertEquals(
+            no.hvl.cpn.io.model
+                .Point(208.433333, 55.5),
+            send.timeLabel,
+        )
+        assertEquals(
+            no.hvl.cpn.io.model
+                .Point(110.933333, -5.5),
+            send.guardLabel,
+        )
+        val arc = page.arcs.single { it.id == "ID1815" }
+        assertEquals(
+            no.hvl.cpn.io.model
+                .Point(206.0, -28.0),
+            arc.label,
+        )
+        // The app's own format keeps it all.
+        assertEquals(
+            document,
+            no.hvl.cpn.io.CpnDocumentFormat
+                .read(
+                    no.hvl.cpn.io.CpnDocumentFormat
+                        .write(document),
+                ),
+        )
+    }
+
+    @Test
+    fun movedLabelsAreExported() {
+        val text =
+            no.hvl.cpn.io.xml.Xml
+                .decode(File(corpus, "cpnbook/models/chapter10/10-1TimedProtocol.cpn").readBytes())
+        val imported = CpnToolsFormat.read(text, "TimedProtocol")
+        val page = imported.document.pages.single()
+        // Dragging Packets To Send 10 to the right moves its labels and half of its arcs' labels.
+        val moved =
+            imported.document.withPage(
+                page.moved(
+                    "ID1784",
+                    page.place("ID1784")!!.position +
+                        no.hvl.cpn.io.model
+                            .Point(10.0, 0.0),
+                ),
+            )
+        val written = CpnToolsFormat.write(moved, imported.source)
+        val again =
+            CpnToolsFormat
+                .read(written, "TimedProtocol")
+                .document.pages
+                .single()
+        assertEquals(
+            no.hvl.cpn.io.model
+                .Point(104.0, -58.0),
+            again.place("ID1784")!!.colourSetLabel,
+        )
+        assertEquals(
+            no.hvl.cpn.io.model
+                .Point(211.0, -28.0),
+            again.arcs.single { it.id == "ID1815" }.label,
+        )
+        assertEquals(page.transition("ID1794")!!.timeLabel, again.transition("ID1794")!!.timeLabel, "other labels stay")
+    }
+
     private fun tryModel(file: String): Result {
         val model =
             try {

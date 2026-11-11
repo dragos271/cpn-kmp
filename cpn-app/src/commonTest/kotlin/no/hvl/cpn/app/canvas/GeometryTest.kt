@@ -100,4 +100,34 @@ class GeometryTest {
         assertEquals(Point(60.0, 75.0) to Point(345.0, 125.0), bounds(listOf(place, transition)))
         assertNull(bounds(emptyList()))
     }
+
+    @Test
+    fun bentArcsGoThroughTheirBendPoints() {
+        val place = NodeShape("p", true, Point(0.0, 0.0), 30.0, 20.0)
+        val transition = NodeShape("t", false, Point(200.0, 0.0), 30.0, 20.0)
+        val page =
+            no.hvl.cpn.io.model.PageDocument(
+                "P",
+                "P",
+                emptyList(),
+                emptyList(),
+                listOf(
+                    no.hvl.cpn.io.model.ArcEdge(
+                        "a",
+                        "p",
+                        "t",
+                        no.hvl.cpn.core.ArcDirection.TRANSITION_TO_PLACE,
+                        "x",
+                        bends = listOf(Point(50.0, 100.0), Point(150.0, 100.0)),
+                    ),
+                ),
+            )
+        val line = arcLines(page, mapOf("p" to place, "t" to transition)).single()
+        // From the transition, through the bends in reverse, to the place.
+        assertEquals(listOf(Point(150.0, 100.0), Point(50.0, 100.0)), line.bends)
+        assertEquals(4, line.points.size)
+        assertEquals(100.0, line.labelAnchor(0.0).y, "the label sits on the middle segment")
+        assertTrue(distanceToArc(line, Point(100.0, 100.0)) < 0.001)
+        assertTrue(distanceToArc(line, Point(100.0, 0.0)) > 50, "not on the straight line between the shapes")
+    }
 }

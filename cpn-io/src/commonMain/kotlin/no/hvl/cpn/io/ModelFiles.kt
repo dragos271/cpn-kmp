@@ -19,6 +19,7 @@ import no.hvl.cpn.io.model.CpnDocument
 import no.hvl.cpn.io.model.PageDocument
 import no.hvl.cpn.io.model.PlaceNode
 import no.hvl.cpn.io.model.Point
+import no.hvl.cpn.io.model.Size
 import no.hvl.cpn.io.model.TransitionNode
 import no.hvl.cpn.io.model.compile
 import no.hvl.cpn.io.model.structure
@@ -228,6 +229,9 @@ public object CpnDocumentFormat {
                                 put("y", coordinate(p.position.y))
                                 p.port?.let { put("port", portName(it)) }
                                 p.fusionSet?.let { put("fusion", it) }
+                                putSize(p.size)
+                                putPoint("colsetAt", p.colourSetLabel)
+                                putPoint("initAt", p.markingLabel)
                             },
                         )
                     }
@@ -251,6 +255,9 @@ public object CpnDocumentFormat {
                                 if (t.time.isNotEmpty()) put("time", t.time)
                                 if (t.priority.isNotEmpty()) put("priority", t.priority)
                                 if (t.code.isNotEmpty()) put("code", t.code)
+                                putSize(t.size)
+                                putPoint("guardAt", t.guardLabel)
+                                putPoint("timeAt", t.timeLabel)
                             },
                         )
                     }
@@ -268,6 +275,7 @@ public object CpnDocumentFormat {
                                 put("direction", directionName(a.direction))
                                 put("inscription", a.inscription)
                                 if (a.kind != ArcKind.NORMAL) put("kind", a.kind.name.lowercase())
+                                putPoint("labelAt", a.label)
                                 if (a.bends.isNotEmpty()) {
                                     put(
                                         "bends",
@@ -322,6 +330,9 @@ public object CpnDocumentFormat {
                     position = position(obj, at),
                     port = obj.optionalString("port", at)?.let { portType(it, "$at.port") },
                     fusionSet = obj.optionalString("fusion", at),
+                    size = size(obj, at),
+                    colourSetLabel = point(obj, "colsetAt", at),
+                    markingLabel = point(obj, "initAt", at),
                 )
             }
         val transitions =
@@ -348,6 +359,9 @@ public object CpnDocumentFormat {
                     time = obj.optionalString("time", at) ?: "",
                     priority = obj.optionalString("priority", at) ?: "",
                     code = obj.optionalString("code", at) ?: "",
+                    size = size(obj, at),
+                    guardLabel = point(obj, "guardAt", at),
+                    timeLabel = point(obj, "timeAt", at),
                 )
             }
         val nodeIds = (places.map { it.id } + transitions.map { it.id }).toSet()
@@ -368,12 +382,52 @@ public object CpnDocumentFormat {
                                 Point(number(pair[0], "$at.bends[$j]"), number(pair[1], "$at.bends[$j]"))
                             },
                         kind = obj.optionalString("kind", at)?.let { arcKind(it, "$at.kind") } ?: ArcKind.NORMAL,
+                        label = point(obj, "labelAt", at),
                     )
                 if (arc.placeId !in nodeIds) fail("$at.place", "no place '${arc.placeId}' on this page")
                 if (arc.transitionId !in nodeIds) fail("$at.transition", "no transition '${arc.transitionId}' on this page")
                 arc
             }
         return PageDocument(json.string("id", path), json.string("name", path), places, transitions, arcs)
+    }
+
+    private fun kotlinx.serialization.json.JsonObjectBuilder.putSize(size: Size?) {
+        if (size == null) return
+        put("w", coordinate(size.width))
+        put("h", coordinate(size.height))
+    }
+
+    private fun kotlinx.serialization.json.JsonObjectBuilder.putPoint(
+        key: String,
+        point: Point?,
+    ) {
+        if (point == null) return
+        put(
+            key,
+            buildJsonArray {
+                add(coordinate(point.x))
+                add(coordinate(point.y))
+            },
+        )
+    }
+
+    private fun size(
+        obj: JsonObject,
+        path: String,
+    ): Size? {
+        val w = obj["w"] ?: return null
+        val h = obj["h"] ?: return null
+        return Size(number(w, "$path.w"), number(h, "$path.h"))
+    }
+
+    private fun point(
+        obj: JsonObject,
+        key: String,
+        path: String,
+    ): Point? {
+        val pair = (obj[key] ?: return null).asArray("$path.$key")
+        if (pair.size != 2) fail("$path.$key", "expected [x, y]")
+        return Point(number(pair[0], "$path.$key"), number(pair[1], "$path.$key"))
     }
 
     private fun position(

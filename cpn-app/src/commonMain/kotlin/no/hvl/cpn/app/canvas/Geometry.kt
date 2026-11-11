@@ -43,9 +43,9 @@ data class NodeShape(
 }
 
 /**
- * An arc drawn from [start] to [end]; [bothEnds] for CPN Tools double arcs. [labelSide] is the unit
- * direction its inscription is pushed to: away from its siblings for parallel arcs, or null to put
- * it above the line.
+ * An arc drawn from [start] to [end] through its [bends] (in drawing order); [bothEnds] for CPN Tools
+ * double arcs. [labelSide] is the unit direction its inscription is pushed to: away from its siblings
+ * for parallel arcs, or null to put it above the line.
  */
 data class ArcLine(
     val id: String,
@@ -53,9 +53,18 @@ data class ArcLine(
     val end: Point,
     val bothEnds: Boolean,
     val labelSide: Point? = null,
+    val bends: List<Point> = emptyList(),
 ) {
-    /** Where the inscription goes: beside the middle of the line. */
+    /** Every corner of the line, from [start] to [end]. */
+    val points: List<Point> get() = listOf(start) + bends + end
+
+    /** Where the inscription goes when the model does not say: beside the middle of the line. */
     fun labelAnchor(offset: Double = 12.0): Point {
+        if (bends.isNotEmpty()) {
+            // On the middle segment of a bent arc.
+            val i = (points.size - 1) / 2
+            return ArcLine(id, points[i], points[i + 1], bothEnds, labelSide).labelAnchor(offset)
+        }
         val mx = (start.x + end.x) / 2
         val my = (start.y + end.y) / 2
         labelSide?.let { return Point(mx + it.x * offset, my + it.y * offset) }
@@ -86,7 +95,10 @@ object ShapeSizes {
     fun transition(nameWidth: Double): Pair<Double, Double> = max(TRANSITION_MIN_WIDTH, nameWidth + PADDING) / 2 to TRANSITION_HEIGHT / 2
 }
 
-/** Shapes of every place and transition of [page]; [nameWidth] measures a name in world units. */
+/**
+ * Shapes of every place and transition of [page]; [nameWidth] measures a name in world units. A size
+ * from the model (a `.cpn` file stores one) is used, widened only if the name would not fit.
+ */
 fun shapesOf(
     page: PageDocument,
     nameWidth: (String) -> Double,
@@ -94,12 +106,22 @@ fun shapesOf(
     val places =
         page.places.map {
             val (hw, hh) = ShapeSizes.place(nameWidth(it.name))
-            NodeShape(it.id, true, it.position, hw, hh)
+            val size = it.size
+            if (size == null) {
+                NodeShape(it.id, true, it.position, hw, hh)
+            } else {
+                NodeShape(it.id, true, it.position, max(size.width / 2, nameWidth(it.name) / 2 + 8), size.height / 2)
+            }
         }
     val transitions =
         page.transitions.map {
             val (hw, hh) = ShapeSizes.transition(nameWidth(it.name))
-            NodeShape(it.id, false, it.position, hw, hh)
+            val size = it.size
+            if (size == null) {
+                NodeShape(it.id, false, it.position, hw, hh)
+            } else {
+                NodeShape(it.id, false, it.position, max(size.width / 2, nameWidth(it.name) / 2 + 6), size.height / 2)
+            }
         }
     return places + transitions
 }
@@ -119,6 +141,21 @@ fun arcLines(
     return page.arcs.mapNotNull { arc ->
         val place = shapes[arc.placeId] ?: return@mapNotNull null
         val transition = shapes[arc.transitionId] ?: return@mapNotNull null
+        if (arc.bends.isNotEmpty()) {
+            // Bent arcs (from .cpn files) go through their bend points, which already keep them apart.
+            val fromPlace = arc.bends
+            val placePoint = place.boundaryToward(fromPlace.first())
+            val transitionPoint = transition.boundaryToward(fromPlace.last())
+            val toPlace = arc.direction == ArcDirection.TRANSITION_TO_PLACE
+            return@mapNotNull ArcLine(
+                arc.id,
+                if (toPlace) transitionPoint else placePoint,
+                if (toPlace) placePoint else transitionPoint,
+                arc.direction == ArcDirection.BIDIRECTIONAL,
+                null,
+                if (toPlace) fromPlace.reversed() else fromPlace,
+            )
+        }
         val siblings = byPair.getValue(arc.placeId to arc.transitionId)
         // The normal is taken from place to transition for every arc of the pair, so input and
         // output arcs are pushed to opposite sides instead of onto each other.
@@ -149,17 +186,23 @@ fun hitTest(
     point: Point,
 ): NodeShape? = shapes.lastOrNull { it.contains(point) }
 
-/** Distance from [p] to the line segment of [arc]. */
+/** Distance from [p] to the nearest segment of [arc]. */
 fun distanceToArc(
     arc: ArcLine,
     p: Point,
+): Double = arc.points.zipWithNext().minOf { (a, b) -> distanceToSegment(a, b, p) }
+
+private fun distanceToSegment(
+    a: Point,
+    b: Point,
+    p: Point,
 ): Double {
-    val dx = arc.end.x - arc.start.x
-    val dy = arc.end.y - arc.start.y
+    val dx = b.x - a.x
+    val dy = b.y - a.y
     val lengthSquared = dx * dx + dy * dy
-    val t = if (lengthSquared == 0.0) 0.0 else (((p.x - arc.start.x) * dx + (p.y - arc.start.y) * dy) / lengthSquared).coerceIn(0.0, 1.0)
-    val cx = arc.start.x + t * dx - p.x
-    val cy = arc.start.y + t * dy - p.y
+    val t = if (lengthSquared == 0.0) 0.0 else (((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSquared).coerceIn(0.0, 1.0)
+    val cx = a.x + t * dx - p.x
+    val cy = a.y + t * dy - p.y
     return sqrt(cx * cx + cy * cy)
 }
 

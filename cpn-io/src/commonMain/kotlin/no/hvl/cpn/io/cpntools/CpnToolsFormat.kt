@@ -9,6 +9,7 @@ import no.hvl.cpn.io.model.CpnDocument
 import no.hvl.cpn.io.model.PageDocument
 import no.hvl.cpn.io.model.PlaceNode
 import no.hvl.cpn.io.model.Point
+import no.hvl.cpn.io.model.Size
 import no.hvl.cpn.io.model.TransitionNode
 import no.hvl.cpn.io.xml.Xml
 import no.hvl.cpn.io.xml.XmlDocument
@@ -431,6 +432,9 @@ private class CpnToolsReader(
                     }
                 },
             fusionSet = e.child("fusioninfo")?.get("name"),
+            size = size(e, "ellipse"),
+            colourSetLabel = labelAt(e, "type"),
+            markingLabel = labelAt(e, "initmark"),
         )
 
     private fun transition(e: XmlElement): TransitionNode {
@@ -452,6 +456,9 @@ private class CpnToolsReader(
             time = region(e, "time"),
             priority = region(e, "priority"),
             code = region(e, "code"),
+            size = size(e, "box"),
+            guardLabel = labelAt(e, "cond"),
+            timeLabel = labelAt(e, "time"),
         )
     }
 
@@ -480,7 +487,7 @@ private class CpnToolsReader(
                 .children("bendpoint")
                 .sortedBy { it["serial"]?.toIntOrNull() ?: 0 }
                 .map(::position)
-        return ArcEdge(id, place, transition, direction, region(e, "annot"), bends, kind)
+        return ArcEdge(id, place, transition, direction, region(e, "annot"), bends, kind, labelAt(e, "annot"))
     }
 
     /** The text of an inscription region such as `<cond><text>n > 0</text></cond>`; empty if absent. */
@@ -498,6 +505,23 @@ private class CpnToolsReader(
         val p = e.child("posattr") ?: return Point(0.0, 0.0)
         // 0.0 - y, not -y: y = 0 must give 0.0, not -0.0, which Point equality tells apart.
         return Point(p["x"]?.toDoubleOrNull() ?: 0.0, 0.0 - (p["y"]?.toDoubleOrNull() ?: 0.0))
+    }
+
+    /** Where CPN Tools draws the region [name] (its `posattr`), or null if it has none. */
+    private fun labelAt(
+        e: XmlElement,
+        name: String,
+    ): Point? = e.child(name)?.takeIf { it.child("posattr") != null }?.let(::position)
+
+    /** The node's `<ellipse w h>` or `<box w h>`, or null. */
+    private fun size(
+        e: XmlElement,
+        shape: String,
+    ): Size? {
+        val s = e.child(shape) ?: return null
+        val w = s["w"]?.toDoubleOrNull() ?: return null
+        val h = s["h"]?.toDoubleOrNull() ?: return null
+        return Size(w, h)
     }
 
     private fun XmlElement.requireId(): String = this["id"] ?: throw ModelFormatException(name, "<$name> without an id (line $line)")

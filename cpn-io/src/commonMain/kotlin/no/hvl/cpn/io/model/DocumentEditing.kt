@@ -165,9 +165,9 @@ public fun CpnDocument.structure(): CpnDocument {
         pages =
             pages.map { page ->
                 page.copy(
-                    places = page.places.map { it.copy(position = origin) },
-                    transitions = page.transitions.map { it.copy(position = origin) },
-                    arcs = page.arcs.map { it.copy(bends = emptyList()) },
+                    places = page.places.map { it.copy(position = origin, size = null, colourSetLabel = null, markingLabel = null) },
+                    transitions = page.transitions.map { it.copy(position = origin, size = null, guardLabel = null, timeLabel = null) },
+                    arcs = page.arcs.map { it.copy(bends = emptyList(), label = null) },
                 )
             },
     )

@@ -9,6 +9,7 @@ import no.hvl.cpn.io.model.CpnDocument
 import no.hvl.cpn.io.model.PageDocument
 import no.hvl.cpn.io.model.PlaceNode
 import no.hvl.cpn.io.model.Point
+import no.hvl.cpn.io.model.Size
 import no.hvl.cpn.io.model.TransitionNode
 import no.hvl.cpn.io.xml.Xml
 import no.hvl.cpn.io.xml.XmlDocument
@@ -345,7 +346,7 @@ internal class CpnToolsWriter(
                         lineattr(thick = "1"),
                         textattr(),
                         textElement("text", node.name),
-                        element("ellipse", "w" to "60.000000", "h" to "40.000000"),
+                        element("ellipse", "w" to number(node.size?.width ?: 60.0), "h" to number(node.size?.height ?: 40.0)),
                         element("token", "x" to "-10.000000", "y" to "0.000000"),
                         element(
                             "marking",
@@ -364,9 +365,23 @@ internal class CpnToolsWriter(
                         ),
                     ),
             )
-        e = e.withPosition(node.position).withText(node.name)
-        e = e.withRegion("type", node.colourSet, node.position + Point(40.0, 25.0), after = setOf("marking", "token", "ellipse", "text"))
-        e = e.withRegion("initmark", node.initialMarking, node.position + Point(40.0, -25.0), after = setOf("type", "marking"))
+        e = e.withPosition(node.position).withText(node.name).withSize("ellipse", node.size)
+        e =
+            e.withRegion(
+                "type",
+                node.colourSet,
+                node.colourSetLabel ?: (node.position + Point(40.0, 25.0)),
+                node.colourSetLabel,
+                setOf("marking", "token", "ellipse", "text"),
+            )
+        e =
+            e.withRegion(
+                "initmark",
+                node.initialMarking,
+                node.markingLabel ?: (node.position + Point(40.0, -25.0)),
+                node.markingLabel,
+                setOf("type", "marking"),
+            )
         val portType =
             when (node.port) {
                 null -> null
@@ -412,11 +427,11 @@ internal class CpnToolsWriter(
                         lineattr(thick = "1", type = "solid"),
                         textattr(),
                         textElement("text", node.name),
-                        element("box", "w" to "60.000000", "h" to "40.000000"),
+                        element("box", "w" to number(node.size?.width ?: 60.0), "h" to number(node.size?.height ?: 40.0)),
                         element("binding", "x" to "7.200000", "y" to "-3.000000"),
                     ),
             )
-        e = e.withPosition(node.position).withText(node.name)
+        e = e.withPosition(node.position).withText(node.name).withSize("box", node.size)
         val subpage = node.subpageId
         if (subpage == null) {
             e = e.remove("subst")
@@ -460,10 +475,17 @@ internal class CpnToolsWriter(
                 ).withAttribute("subpage", subpageXml).withAttribute("portsock", portsock)
             e = e.withChild("subst", subst, before = setOf("cond", "time", "code", "priority", "channel"))
         }
-        e = e.withRegion("cond", node.guard, node.position + Point(-40.0, -30.0), after = setOf("subst", "binding", "box", "text"))
-        e = e.withRegion("time", node.time, node.position + Point(40.0, -30.0), after = setOf("cond"))
-        e = e.withRegion("code", node.code, node.position + Point(40.0, 30.0), after = setOf("time"))
-        e = e.withRegion("priority", node.priority, node.position + Point(-40.0, 30.0), after = setOf("code", "channel"))
+        e =
+            e.withRegion(
+                "cond",
+                node.guard,
+                node.guardLabel ?: (node.position + Point(-40.0, -30.0)),
+                node.guardLabel,
+                setOf("subst", "binding", "box", "text"),
+            )
+        e = e.withRegion("time", node.time, node.timeLabel ?: (node.position + Point(40.0, -30.0)), node.timeLabel, setOf("cond"))
+        e = e.withRegion("code", node.code, node.position + Point(40.0, 30.0), null, setOf("time"))
+        e = e.withRegion("priority", node.priority, node.position + Point(-40.0, 30.0), null, setOf("code", "channel"))
         return e
     }
 
@@ -524,7 +546,7 @@ internal class CpnToolsWriter(
             e = e.replaceAll("bendpoint", bends, before = setOf("annot"))
         }
         val middle = Point((from.x + to.x) / 2, (from.y + to.y) / 2) + Point(10.0, -10.0)
-        return e.withRegion("annot", arc.inscription, middle, after = setOf("bendpoint", "placeend"))
+        return e.withRegion("annot", arc.inscription, arc.label ?: middle, arc.label, setOf("bendpoint", "placeend"))
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -834,11 +856,15 @@ internal class CpnToolsWriter(
         )
     }
 
-    /** Sets an inscription region's text, creating the region if needed; the importer trims, so surrounding whitespace is kept. */
+    /**
+     * Sets an inscription region's text and, if the document has one, its [label] position; creates
+     * the region at [at] if needed. The importer trims, so whitespace around unchanged text is kept.
+     */
     private fun XmlElement.withRegion(
         name: String,
         text: String,
         at: Point,
+        label: Point?,
         after: Set<String>,
     ): XmlElement {
         val old = child(name)
@@ -847,10 +873,45 @@ internal class CpnToolsWriter(
             if (text.isEmpty() && rawStart != null) return this
             return insertAfter(region(name, text, at), after)
         }
+        var updated = old
         val textElement = old.child("text") ?: XmlElement("text", listOf("tool" to "CPN Tools", "version" to TOOL_VERSION))
-        if (textElement.text.trim() == text) return this
-        val updated = textElement.copy(children = if (text.isEmpty()) emptyList() else listOf(XmlText(text)))
-        return withChild(name, old.withChild("text", updated, before = emptySet()), before = emptySet())
+        if (textElement.text.trim() != text) {
+            updated =
+                updated.withChild(
+                    "text",
+                    textElement.copy(children = if (text.isEmpty()) emptyList() else listOf(XmlText(text))),
+                    before = emptySet(),
+                )
+        }
+        // A moved label: compared as CPN Tools writes numbers, so an unmoved one keeps its bytes.
+        val p = old.child("posattr")
+        if (label != null &&
+            p != null &&
+            (p["x"]?.toDoubleOrNull()?.let(::number) != number(label.x) || p["y"]?.toDoubleOrNull()?.let(::number) != number(-label.y))
+        ) {
+            updated =
+                updated.withChild(
+                    "posattr",
+                    p.withAttribute("x", number(label.x)).withAttribute("y", number(-label.y)),
+                    before = emptySet(),
+                )
+        }
+        return if (updated === old) this else withChild(name, updated, before = emptySet())
+    }
+
+    /** The node's `<ellipse>` or `<box>` with [size], if the document has one and it differs. */
+    private fun XmlElement.withSize(
+        shape: String,
+        size: Size?,
+    ): XmlElement {
+        val old = child(shape) ?: return this
+        if (size == null) return this
+        if (old["w"]?.toDoubleOrNull()?.let(::number) == number(size.width) &&
+            old["h"]?.toDoubleOrNull()?.let(::number) == number(size.height)
+        ) {
+            return this
+        }
+        return withChild(shape, old.withAttribute("w", number(size.width)).withAttribute("h", number(size.height)), before = emptySet())
     }
 }
 

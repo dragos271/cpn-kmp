@@ -22,6 +22,18 @@ public data class Point(
     public operator fun minus(other: Point): Point = Point(x - other.x, y - other.y)
 }
 
+/** A node's width and height in pixels, as CPN Tools stores them; null in the model means the editor's default size. */
+public data class Size(
+    val width: Double,
+    val height: Double,
+)
+
+/*
+ * Label positions (`...Label` fields) are where CPN Tools draws an inscription: the centre of its text,
+ * in canvas coordinates like [Point]. Null means the editor places the label itself (models made in
+ * the app); `.cpn` files store one for every inscription.
+ */
+
 public data class PlaceNode(
     val id: String,
     val name: String,
@@ -31,6 +43,9 @@ public data class PlaceNode(
     val position: Point,
     val port: PortType? = null,
     val fusionSet: String? = null,
+    val size: Size? = null,
+    val colourSetLabel: Point? = null,
+    val markingLabel: Point? = null,
 )
 
 public data class TransitionNode(
@@ -52,6 +67,9 @@ public data class TransitionNode(
     val priority: String = "",
     /** CPN Tools' code segment; empty for none. Not supported: [check] reports it. */
     val code: String = "",
+    val size: Size? = null,
+    val guardLabel: Point? = null,
+    val timeLabel: Point? = null,
 )
 
 /** CPN Tools' arc kinds. Inhibitor and reset arcs are outside the CPN definition (Jensen & Kristensen) and not supported yet. */
@@ -67,6 +85,7 @@ public data class ArcEdge(
     val inscription: String,
     val bends: List<Point> = emptyList(),
     val kind: ArcKind = ArcKind.NORMAL,
+    val label: Point? = null,
 )
 
 public data class PageDocument(
@@ -82,15 +101,41 @@ public data class PageDocument(
 
     public fun arcsOf(nodeId: String): List<ArcEdge> = arcs.filter { it.placeId == nodeId || it.transitionId == nodeId }
 
-    /** Moves a place or transition. */
+    /**
+     * Moves a place or transition. Its labels move with it, and the labels of its arcs move half as
+     * far, as the middle of the arc does.
+     */
     public fun moved(
         nodeId: String,
         position: Point,
-    ): PageDocument =
-        copy(
-            places = places.map { if (it.id == nodeId) it.copy(position = position) else it },
-            transitions = transitions.map { if (it.id == nodeId) it.copy(position = position) else it },
+    ): PageDocument {
+        val old = place(nodeId)?.position ?: transition(nodeId)?.position ?: return this
+        val delta = position - old
+        val half = Point(delta.x / 2, delta.y / 2)
+        return copy(
+            places =
+                places.map {
+                    if (it.id != nodeId) {
+                        it
+                    } else {
+                        it.copy(
+                            position = position,
+                            colourSetLabel = it.colourSetLabel?.plus(delta),
+                            markingLabel = it.markingLabel?.plus(delta),
+                        )
+                    }
+                },
+            transitions =
+                transitions.map {
+                    if (it.id != nodeId) {
+                        it
+                    } else {
+                        it.copy(position = position, guardLabel = it.guardLabel?.plus(delta), timeLabel = it.timeLabel?.plus(delta))
+                    }
+                },
+            arcs = arcs.map { if (it.placeId == nodeId || it.transitionId == nodeId) it.copy(label = it.label?.plus(half)) else it },
         )
+    }
 }
 
 public data class CpnDocument(

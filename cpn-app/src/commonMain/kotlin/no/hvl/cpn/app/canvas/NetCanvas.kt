@@ -264,7 +264,8 @@ fun NetCanvas(
                 if (arcDoc.inscription.isBlank()) continue
                 val line = arcs.firstOrNull { it.id == arcDoc.id } ?: continue
                 val style = if (arcDoc.id in problems) labelStyle.copy(color = colors.error) else labelStyle
-                drawLabel(measurer, ellipsize(arcDoc.inscription, 34), line.labelAnchor(), style, centered = true)
+                // Where the .cpn file put it, or beside the middle of the arc.
+                drawLabel(measurer, inscriptionText(arcDoc.inscription), arcDoc.label ?: line.labelAnchor(), style, centered = true)
             }
 
             for (place in page.places) {
@@ -272,10 +273,20 @@ fun NetCanvas(
                 drawPlace(shape, colors, selected = place.id == selection)
                 if (place.id in problems) drawProblem(shape, colors.error)
                 drawLabel(measurer, place.name, shape.center, nameStyle, centered = true, middle = true)
-                drawLabel(measurer, place.colourSet, Point(shape.right - 6, shape.bottom + 2), noteStyle)
+                val colourSetAt = place.colourSetLabel
+                if (colourSetAt != null) {
+                    drawLabel(measurer, place.colourSet, colourSetAt, noteStyle, centered = true)
+                } else {
+                    drawLabel(measurer, place.colourSet, Point(shape.right - 6, shape.bottom + 2), noteStyle)
+                }
                 if (overlay == null) {
                     if (place.initialMarking.isNotBlank()) {
-                        drawLabel(measurer, ellipsize(place.initialMarking, 30), Point(shape.right - 4, shape.top - 16), labelStyle)
+                        val markingAt = place.markingLabel
+                        if (markingAt != null) {
+                            drawLabel(measurer, inscriptionText(place.initialMarking), markingAt, labelStyle, centered = true)
+                        } else {
+                            drawLabel(measurer, inscriptionText(place.initialMarking), Point(shape.right - 4, shape.top - 16), labelStyle)
+                        }
                     }
                 } else {
                     overlay.tokens[place.id]?.takeIf { it.count > 0 }?.let { tokens ->
@@ -298,7 +309,22 @@ fun NetCanvas(
                 if (transition.id in problems) drawProblem(shape, colors.error)
                 drawLabel(measurer, transition.name, shape.center, nameStyle, centered = true, middle = true)
                 if (transition.guard.isNotBlank()) {
-                    drawLabel(measurer, ellipsize("[${transition.guard}]", 40), Point(shape.left, shape.top - 18), labelStyle)
+                    // CPN Tools guards are usually written in brackets already.
+                    val guard = inscriptionText(transition.guard.let { if (it.trimStart().startsWith("[")) it else "[$it]" })
+                    val guardAt = transition.guardLabel
+                    if (guardAt != null) {
+                        drawLabel(measurer, guard, guardAt, labelStyle, centered = true)
+                    } else {
+                        drawLabel(measurer, guard, Point(shape.left, shape.top - 18), labelStyle)
+                    }
+                }
+                if (transition.time.isNotBlank()) {
+                    val timeAt = transition.timeLabel
+                    if (timeAt != null) {
+                        drawLabel(measurer, inscriptionText(transition.time), timeAt, labelStyle, centered = true)
+                    } else {
+                        drawLabel(measurer, inscriptionText(transition.time), Point(shape.right + 4, shape.top - 16), labelStyle)
+                    }
                 }
                 transition.subpageId?.let { drawLabel(measurer, pageNames[it] ?: it, Point(shape.left + 4, shape.bottom + 2), noteStyle) }
             }
@@ -316,6 +342,19 @@ fun NetCanvas(
         }
     }
 }
+
+/**
+ * An inscription as it is drawn: every line kept (CPN Tools models write `if ... then ... else` over
+ * several lines), with only absurdly long lines or very many lines shortened.
+ */
+private fun inscriptionText(text: String): String {
+    val lines = text.trim().lines()
+    val kept = lines.take(MAX_LABEL_LINES).map { if (it.length <= MAX_LABEL_LINE) it else it.take(MAX_LABEL_LINE - 1) + "…" }
+    return (if (lines.size > MAX_LABEL_LINES) kept + "…" else kept).joinToString("\n")
+}
+
+private const val MAX_LABEL_LINES = 12
+private const val MAX_LABEL_LINE = 80
 
 private fun ellipsize(
     text: String,
@@ -406,11 +445,11 @@ private fun DrawScope.drawArcLine(
     color: Color,
     width: Float = 1.5f,
 ) {
-    val start = Offset(arc.start.x.toFloat(), arc.start.y.toFloat())
-    val end = Offset(arc.end.x.toFloat(), arc.end.y.toFloat())
-    drawLine(color, start, end, strokeWidth = width)
-    drawArrowHead(start, end, color)
-    if (arc.bothEnds) drawArrowHead(end, start, color)
+    val points = arc.points.map { Offset(it.x.toFloat(), it.y.toFloat()) }
+    for ((a, b) in points.zipWithNext()) drawLine(color, a, b, strokeWidth = width)
+    // Arrowheads follow the last (and for double arcs the first) segment, so bent arcs point right.
+    drawArrowHead(points[points.size - 2], points.last(), color)
+    if (arc.bothEnds) drawArrowHead(points[1], points.first(), color)
 }
 
 private fun DrawScope.drawArrowHead(

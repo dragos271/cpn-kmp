@@ -17,6 +17,7 @@ app edits and `cpn simulate` runs. It is plain common Kotlin with its own small 
 | `<subst subpage portsock="(port,socket)…">` | A substitution transition and its port/socket assignments | The pairs are (port place on the subpage, socket place on this page) |
 | `<arc orientation>`: `PtoT`, `TtoP`, `BOTHDIR`, `Inhibitor`, `Reset` | An arc with direction and kind | Inhibitor and reset arcs are reported as unsupported |
 | `<annot>`, `<bendpoint serial>` | The arc inscription; bend points in serial order | |
+| `<ellipse w h>`, `<box w h>`, and the `posattr` of every inscription region | Node sizes and label positions | The app draws labels where CPN Tools does, with all their lines, and arcs through their bend points |
 | `<globbox>`: `block`, `color`, `var`, `ml`, `globref`, `use` | The declarations text | See below |
 | `monitorblock`, `Aux`, channels | Not read | Counted and reported in the import notes |
 
@@ -49,7 +50,7 @@ round-trip tests (T3.1c) know what may change on the first import, and nothing e
 | Names with line breaks (`Packets\nTo Send`) | Kept in the model; the engine shows them on one line (`Packets To Send`) in traces and reports |
 | Text encoding | Read as the declared ISO-8859-1 (or UTF-8), held as Unicode |
 | Line endings | CRLF inside text is kept as read (3 corpus files use CRLF) |
-| Graphics (colours, line widths, label positions, sizes, `Aux`) | Not in our model; kept in the parsed XML (`ImportedModel.source`) for export (T3.1b) |
+| Graphics (colours, line widths, `Aux`) | Not in our model; kept in the parsed XML (`ImportedModel.source`) for export (T3.1b). Node sizes and label positions are in the model |
 
 ## Import notes
 
@@ -95,5 +96,5 @@ Importing a generated file gives the same model back, except for:
 | Coordinates | Six decimals, as CPN Tools writes them |
 | Declarations | One element each. Blank lines between declarations are not kept, and a `;` is added between declarations that had none. The parsed declarations are identical (tested) |
 | Sockets glued to ports by name | Written as explicit `portsock` pairs, so they come back explicit |
-| Graphics | CPN Tools defaults (sizes, colours, label offsets) |
+| Graphics | The model's node sizes and label positions where it has them; otherwise CPN Tools defaults (sizes, colours, label offsets) |
 | Characters outside ISO-8859-1 | Written as character references (`&#8364;`) and read back as the character |

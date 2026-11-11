@@ -120,6 +120,9 @@ The goal is to run real CPN Tools models and produce state-space reports.
   - **Corpus gaps fixed along the way:** standard colour sets declared again, declarations in dependency order,
     unbracketed guard lists, `x::xs` and summed patterns, I/O sockets with two arcs, CPN Tools' list library.
   - **Biggest remaining gap:** in CPN Tools `'a ms` *is* `'a list` (9 models). That is T2.10.
+  - **Layout (2026-11-11):** node sizes, bend points and every label position are imported, and the app draws labels
+    where CPN Tools does, with all their lines. Before, it guessed the positions and cut text to one line, which made
+    the book's models unreadable. Labels move with their nodes, and moved labels are written back on export.
 - **T2.10 CPN Tools language compatibility (from T3.1).** Treat multisets as lists the way CPN Tools does, add
   colour set `mult` and `sort_ms`, and decide on `real` equality and per-declaration checking (an unused broken
   declaration does not block a model in CPN Tools).
