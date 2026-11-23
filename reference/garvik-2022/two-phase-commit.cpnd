@@ -1,0 +1,289 @@
+{
+ "format": "cpn-document",
+ "version": 1,
+ "name": "TwoPhaseCommit",
+ "declarations": "val W = 2;\ncolset UNIT = unit;\ncolset Worker = index wrk with 1..W;\ncolset Workers = list Worker;\ncolset Vote = with Yes | No;\ncolset WorkerxVote = product Worker * Vote;\ncolset WorkerxVotes = list WorkerxVote;\ncolset Decision = with abort | commit;\ncolset WorkerxDecision = product Worker * Decision;\nvar w : Worker;\nvar workers : Workers;\nvar vote : Vote;\nvar votes : WorkerxVotes;\nvar decision : Decision;\nfun AddVote ((w,vote),votes) = (w,vote) :: votes;\nfun yesVotes votes = List.filter (fn (w,vote) => vote = Yes) votes;\nfun YesWorkers votes = List.map (fn (w,_) => w) (yesVotes votes);\nfun InformYesWorkers votes = let val yesworkers = YesWorkers votes val decision = (if (List.length yesworkers = W) then commit else abort) in List.map (fn w => (w,decision)) yesworkers end;\nfun All votes = (List.length votes = W);\n",
+ "pages": [
+  {
+   "id": "Main",
+   "name": "TwoPhaseCommit",
+   "places": [
+    {
+     "id": "CI",
+     "name": "CoordinatorIdle",
+     "colset": "UNIT",
+     "x": 0,
+     "y": 0,
+     "init": "1`()"
+    },
+    {
+     "id": "WV",
+     "name": "WaitingVotes",
+     "colset": "UNIT",
+     "x": 0,
+     "y": 240
+    },
+    {
+     "id": "CC",
+     "name": "CanCommit",
+     "colset": "Worker",
+     "x": 240,
+     "y": 120
+    },
+    {
+     "id": "WI",
+     "name": "WorkerIdle",
+     "colset": "Worker",
+     "x": 480,
+     "y": 120,
+     "init": "Worker.all()"
+    },
+    {
+     "id": "V",
+     "name": "Votes",
+     "colset": "WorkerxVote",
+     "x": 240,
+     "y": 300
+    },
+    {
+     "id": "CV",
+     "name": "CollectedVotes",
+     "colset": "WorkerxVotes",
+     "x": 120,
+     "y": 480,
+     "init": "1`[]"
+    },
+    {
+     "id": "D",
+     "name": "Decision",
+     "colset": "WorkerxDecision",
+     "x": 240,
+     "y": 540
+    },
+    {
+     "id": "WD",
+     "name": "WaitingDecision",
+     "colset": "Worker",
+     "x": 480,
+     "y": 420
+    },
+    {
+     "id": "A",
+     "name": "Acknowledge",
+     "colset": "Worker",
+     "x": 240,
+     "y": 720
+    },
+    {
+     "id": "WA",
+     "name": "WaitingAcknowledgements",
+     "colset": "Workers",
+     "x": 0,
+     "y": 600
+    }
+   ],
+   "transitions": [
+    {
+     "id": "SC",
+     "name": "SendCanCommit",
+     "x": 0,
+     "y": 120
+    },
+    {
+     "id": "RC",
+     "name": "ReceiveCanCommit",
+     "x": 480,
+     "y": 240
+    },
+    {
+     "id": "CO",
+     "name": "CollectOneVote",
+     "x": 120,
+     "y": 360
+    },
+    {
+     "id": "AV",
+     "name": "AllVotesCollected",
+     "x": 0,
+     "y": 480,
+     "guard": "All votes"
+    },
+    {
+     "id": "RD",
+     "name": "ReceiveDecision",
+     "x": 480,
+     "y": 600
+    },
+    {
+     "id": "RA",
+     "name": "ReceiveAcknowledgements",
+     "x": 0,
+     "y": 720
+    }
+   ],
+   "arcs": [
+    {
+     "id": "a0",
+     "place": "CI",
+     "transition": "SC",
+     "direction": "in",
+     "inscription": "()"
+    },
+    {
+     "id": "a1",
+     "place": "CC",
+     "transition": "SC",
+     "direction": "out",
+     "inscription": "Worker.all()"
+    },
+    {
+     "id": "a2",
+     "place": "WV",
+     "transition": "SC",
+     "direction": "out",
+     "inscription": "()"
+    },
+    {
+     "id": "a3",
+     "place": "CC",
+     "transition": "RC",
+     "direction": "in",
+     "inscription": "w"
+    },
+    {
+     "id": "a4",
+     "place": "WI",
+     "transition": "RC",
+     "direction": "in",
+     "inscription": "w"
+    },
+    {
+     "id": "a5",
+     "place": "V",
+     "transition": "RC",
+     "direction": "out",
+     "inscription": "(w,vote)"
+    },
+    {
+     "id": "a6",
+     "place": "WI",
+     "transition": "RC",
+     "direction": "out",
+     "inscription": "if vote = No then 1`w else empty"
+    },
+    {
+     "id": "a7",
+     "place": "WD",
+     "transition": "RC",
+     "direction": "out",
+     "inscription": "if vote = Yes then 1`w else empty"
+    },
+    {
+     "id": "a8",
+     "place": "V",
+     "transition": "CO",
+     "direction": "in",
+     "inscription": "(w,vote)"
+    },
+    {
+     "id": "a9",
+     "place": "CV",
+     "transition": "CO",
+     "direction": "in",
+     "inscription": "votes"
+    },
+    {
+     "id": "a10",
+     "place": "CV",
+     "transition": "CO",
+     "direction": "out",
+     "inscription": "AddVote ((w,vote),votes)"
+    },
+    {
+     "id": "a11",
+     "place": "WV",
+     "transition": "AV",
+     "direction": "in",
+     "inscription": "()"
+    },
+    {
+     "id": "a12",
+     "place": "CV",
+     "transition": "AV",
+     "direction": "in",
+     "inscription": "votes"
+    },
+    {
+     "id": "a13",
+     "place": "CV",
+     "transition": "AV",
+     "direction": "out",
+     "inscription": "[]"
+    },
+    {
+     "id": "a14",
+     "place": "D",
+     "transition": "AV",
+     "direction": "out",
+     "inscription": "InformYesWorkers votes"
+    },
+    {
+     "id": "a15",
+     "place": "WA",
+     "transition": "AV",
+     "direction": "out",
+     "inscription": "YesWorkers votes"
+    },
+    {
+     "id": "a16",
+     "place": "WD",
+     "transition": "RD",
+     "direction": "in",
+     "inscription": "w"
+    },
+    {
+     "id": "a17",
+     "place": "D",
+     "transition": "RD",
+     "direction": "in",
+     "inscription": "(w,decision)"
+    },
+    {
+     "id": "a18",
+     "place": "A",
+     "transition": "RD",
+     "direction": "out",
+     "inscription": "w"
+    },
+    {
+     "id": "a19",
+     "place": "WI",
+     "transition": "RD",
+     "direction": "out",
+     "inscription": "w"
+    },
+    {
+     "id": "a20",
+     "place": "WA",
+     "transition": "RA",
+     "direction": "in",
+     "inscription": "workers"
+    },
+    {
+     "id": "a21",
+     "place": "A",
+     "transition": "RA",
+     "direction": "in",
+     "inscription": "workers"
+    },
+    {
+     "id": "a22",
+     "place": "CI",
+     "transition": "RA",
+     "direction": "out",
+     "inscription": "()"
+    }
+   ]
+  }
+ ]
+}

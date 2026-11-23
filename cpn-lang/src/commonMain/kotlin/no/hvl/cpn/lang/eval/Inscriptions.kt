@@ -54,7 +54,7 @@ public class CpnMlInscriptions(
         source: SourceText? = null,
     ): ArcInscription<Any?> {
         val used = interpreter.variablesOf(expr).map { variables.getValue(it) }.toSet()
-        val pattern = pattern(expr)
+        val pattern = pattern(expr)?.takeUnless { listOfTokens(it.second, colourSet) }
         return if (pattern != null) {
             CpnMlPattern(expr, pattern.second, pattern.first, used, colourSet, source)
         } else {
@@ -183,6 +183,20 @@ public class CpnMlInscriptions(
                 1 to expr
             }
         return if (isShape(shape)) count to shape else null
+    }
+
+    /**
+     * True if [shape] is a list variable on a place that does not hold lists, such as `workers : Workers`
+     * on a place of `Worker`. Its value is then a multiset of the list's elements (multisets are lists),
+     * so it cannot bind from a token there: the variable is bound elsewhere and the arc is evaluated.
+     */
+    private fun listOfTokens(
+        shape: Expr,
+        place: CpnColourSet,
+    ): Boolean {
+        fun untimed(c: CpnColourSet) = if (c is TimedColourSet) c.untimed else c
+        val variable = (shape as? IdentExpr)?.let { variables[it.name.name] } ?: return false
+        return untimed(variable.colourSet as CpnColourSet) is ListColourSet && untimed(place) !is ListColourSet
     }
 
     /** Variables, constants, constructors, tuples, records and lists of those, and `x::xs`. */

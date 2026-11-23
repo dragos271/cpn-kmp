@@ -1,0 +1,544 @@
+{
+ "format": "cpn-document",
+ "version": 1,
+ "name": "ResourceAllocation",
+ "declarations": "colset U = with p | q;\ncolset E = with e;\nvar x : U;\n",
+ "pages": [
+  {
+   "id": "id4",
+   "name": "Top",
+   "places": [
+    {
+     "id": "id71",
+     "name": "R",
+     "colset": "E",
+     "init": "1`e",
+     "x": -262,
+     "y": -165,
+     "w": 21,
+     "h": 21,
+     "colsetAt": [
+      -262,
+      -143.5
+     ],
+     "initAt": [
+      -288.5,
+      -165
+     ]
+    },
+    {
+     "id": "id80",
+     "name": "S",
+     "colset": "E",
+     "init": "3`e",
+     "x": -262,
+     "y": -87,
+     "w": 21,
+     "h": 21,
+     "colsetAt": [
+      -262,
+      -65.5
+     ],
+     "initAt": [
+      -288.5,
+      -87
+     ]
+    },
+    {
+     "id": "id87",
+     "name": "T",
+     "colset": "E",
+     "init": "2`e",
+     "x": -262,
+     "y": -13,
+     "w": 21,
+     "h": 21,
+     "colsetAt": [
+      -262,
+      8.5
+     ],
+     "initAt": [
+      -288.5,
+      -13
+     ]
+    },
+    {
+     "id": "id7",
+     "name": "A",
+     "colset": "U",
+     "init": "3`q",
+     "x": 25,
+     "y": -285,
+     "w": 21,
+     "h": 19,
+     "colsetAt": [
+      6.5,
+      -285
+     ],
+     "initAt": [
+      62.5,
+      -285
+     ]
+    },
+    {
+     "id": "id14",
+     "name": "B",
+     "colset": "U",
+     "init": "2`p",
+     "x": 25,
+     "y": -202,
+     "w": 21,
+     "h": 19,
+     "colsetAt": [
+      6.5,
+      -202
+     ],
+     "initAt": [
+      58,
+      -218
+     ]
+    },
+    {
+     "id": "id21",
+     "name": "C",
+     "colset": "U",
+     "init": "",
+     "x": 25,
+     "y": -123,
+     "w": 21,
+     "h": 19,
+     "colsetAt": [
+      6.5,
+      -123
+     ],
+     "initAt": [
+      67,
+      -139
+     ]
+    },
+    {
+     "id": "id27",
+     "name": "D",
+     "colset": "U",
+     "init": "",
+     "x": 25,
+     "y": -50,
+     "w": 21,
+     "h": 19,
+     "colsetAt": [
+      6.5,
+      -50
+     ],
+     "initAt": [
+      67,
+      -66
+     ]
+    },
+    {
+     "id": "id33",
+     "name": "E",
+     "colset": "U",
+     "init": "",
+     "x": 25,
+     "y": 22,
+     "w": 21,
+     "h": 19,
+     "colsetAt": [
+      6.5,
+      22
+     ],
+     "initAt": [
+      67,
+      5
+     ]
+    }
+   ],
+   "transitions": [
+    {
+     "id": "id59",
+     "name": "T4",
+     "guard": "",
+     "x": -19,
+     "y": -13,
+     "w": 37,
+     "h": 17,
+     "guardAt": [
+      -46.5,
+      -32.5
+     ],
+     "timeAt": [
+      14,
+      -32.5
+     ]
+    },
+    {
+     "id": "id52",
+     "name": "T3",
+     "guard": "",
+     "x": -19,
+     "y": -86,
+     "w": 37,
+     "h": 17,
+     "guardAt": [
+      -46.5,
+      -105.5
+     ],
+     "timeAt": [
+      14,
+      -105.5
+     ]
+    },
+    {
+     "id": "id46",
+     "name": "T2",
+     "guard": "",
+     "x": -19,
+     "y": -161,
+     "w": 37,
+     "h": 17,
+     "guardAt": [
+      -46.5,
+      -180.5
+     ],
+     "timeAt": [
+      14,
+      -180.5
+     ]
+    },
+    {
+     "id": "id39",
+     "name": "T1",
+     "guard": "[x=q]",
+     "x": -19,
+     "y": -241,
+     "w": 37,
+     "h": 17,
+     "guardAt": [
+      20.5,
+      -241
+     ],
+     "timeAt": [
+      14,
+      -260.5
+     ]
+    },
+    {
+     "id": "id65",
+     "name": "T5",
+     "guard": "",
+     "x": -19,
+     "y": 60,
+     "w": 37,
+     "h": 19,
+     "guardAt": [
+      -46.5,
+      39.5
+     ],
+     "timeAt": [
+      14,
+      39.5
+     ]
+    }
+   ],
+   "arcs": [
+    {
+     "id": "id96",
+     "place": "id7",
+     "transition": "id39",
+     "direction": "in",
+     "inscription": "x",
+     "labelAt": [
+      18,
+      -260
+     ]
+    },
+    {
+     "id": "id102",
+     "place": "id14",
+     "transition": "id39",
+     "direction": "out",
+     "inscription": "x",
+     "labelAt": [
+      -16,
+      -215
+     ]
+    },
+    {
+     "id": "id108",
+     "place": "id14",
+     "transition": "id46",
+     "direction": "in",
+     "inscription": "x",
+     "labelAt": [
+      27,
+      -183
+     ]
+    },
+    {
+     "id": "id114",
+     "place": "id21",
+     "transition": "id46",
+     "direction": "out",
+     "inscription": "x",
+     "labelAt": [
+      18,
+      -151
+     ]
+    },
+    {
+     "id": "id120",
+     "place": "id21",
+     "transition": "id52",
+     "direction": "in",
+     "inscription": "x",
+     "labelAt": [
+      21,
+      -98
+     ]
+    },
+    {
+     "id": "id126",
+     "place": "id27",
+     "transition": "id52",
+     "direction": "out",
+     "inscription": "x",
+     "labelAt": [
+      21,
+      -74
+     ]
+    },
+    {
+     "id": "id132",
+     "place": "id27",
+     "transition": "id59",
+     "direction": "in",
+     "inscription": "x",
+     "labelAt": [
+      21,
+      -26
+     ]
+    },
+    {
+     "id": "id136",
+     "place": "id33",
+     "transition": "id59",
+     "direction": "out",
+     "inscription": "x",
+     "labelAt": [
+      21,
+      -3
+     ]
+    },
+    {
+     "id": "id140",
+     "place": "id33",
+     "transition": "id65",
+     "direction": "in",
+     "inscription": "x",
+     "labelAt": [
+      24,
+      45
+     ]
+    },
+    {
+     "id": "id144",
+     "place": "id7",
+     "transition": "id65",
+     "direction": "out",
+     "inscription": "if x=q\nthen 1`q\nelse empty",
+     "labelAt": [
+      101,
+      -348
+     ],
+     "bends": [
+      [
+       25,
+       86
+      ],
+      [
+       156,
+       86
+      ],
+      [
+       156,
+       -323
+      ],
+      [
+       25,
+       -323
+      ]
+     ]
+    },
+    {
+     "id": "id148",
+     "place": "id71",
+     "transition": "id39",
+     "direction": "in",
+     "inscription": "e",
+     "labelAt": [
+      -103,
+      -260
+     ],
+     "bends": [
+      [
+       -19,
+       -278
+      ],
+      [
+       -41,
+       -278
+      ]
+     ]
+    },
+    {
+     "id": "id153",
+     "place": "id71",
+     "transition": "id52",
+     "direction": "out",
+     "inscription": "if x=q then 1`e\nelse empty",
+     "labelAt": [
+      -113,
+      -110
+     ],
+     "bends": [
+      [
+       -19,
+       -66
+      ]
+     ]
+    },
+    {
+     "id": "id157",
+     "place": "id80",
+     "transition": "id46",
+     "direction": "in",
+     "inscription": "case x of\n  p => 2`e\n| q => 1`e",
+     "labelAt": [
+      -81,
+      -168
+     ],
+     "bends": [
+      [
+       -19,
+       -193
+      ]
+     ]
+    },
+    {
+     "id": "id161",
+     "place": "id80",
+     "transition": "id65",
+     "direction": "out",
+     "inscription": "2`e",
+     "labelAt": [
+      -73,
+      33
+     ],
+     "bends": [
+      [
+       -19,
+       88
+      ]
+     ]
+    },
+    {
+     "id": "id165",
+     "place": "id80",
+     "transition": "id39",
+     "direction": "in",
+     "inscription": "e",
+     "labelAt": [
+      -102,
+      -222
+     ],
+     "bends": [
+      [
+       -19,
+       -269
+      ],
+      [
+       -19,
+       -269
+      ]
+     ]
+    },
+    {
+     "id": "id169",
+     "place": "id87",
+     "transition": "id52",
+     "direction": "in",
+     "inscription": "if x=p then 1`e\nelse empty",
+     "labelAt": [
+      -149,
+      -66
+     ],
+     "bends": [
+      [
+       -19,
+       -114
+      ]
+     ]
+    },
+    {
+     "id": "id173",
+     "place": "id87",
+     "transition": "id59",
+     "direction": "in",
+     "inscription": "e",
+     "labelAt": [
+      -81,
+      -45
+     ],
+     "bends": [
+      [
+       -19,
+       -41
+      ]
+     ]
+    },
+    {
+     "id": "id177",
+     "place": "id87",
+     "transition": "id65",
+     "direction": "out",
+     "inscription": "case x of\n  p => 2`e\n| q => 1`e",
+     "labelAt": [
+      -176,
+      54
+     ],
+     "bends": [
+      [
+       -19,
+       95
+      ]
+     ]
+    },
+    {
+     "id": "id181",
+     "place": "id14",
+     "transition": "id65",
+     "direction": "out",
+     "inscription": "if x=p\nthen 1`p\nelse empty",
+     "labelAt": [
+      102,
+      -176
+     ],
+     "bends": [
+      [
+       32.424621,
+       86
+      ],
+      [
+       156,
+       86
+      ],
+      [
+       156,
+       -202
+      ]
+     ]
+    }
+   ]
+  }
+ ]
+}

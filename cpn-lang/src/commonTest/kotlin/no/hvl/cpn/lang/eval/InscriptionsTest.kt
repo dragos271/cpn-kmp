@@ -1,6 +1,7 @@
 package no.hvl.cpn.lang.eval
 
 import no.hvl.cpn.core.Binding
+import no.hvl.cpn.core.PatternInscription
 import no.hvl.cpn.lang.ast.SourceText
 import no.hvl.cpn.lang.parse.CpnMlParser
 import no.hvl.cpn.lang.value.formatValue
@@ -39,6 +40,22 @@ class InscriptionsTest {
         val list = parser.parseExpression(SourceText("m", "[1, 2, 2]"))
         assertEquals("1`[1,2,2]", inscriptions.multiset(list, nos).format(element = ::formatValue), "a token of NOS")
         assertEquals("1`1++2`2", inscriptions.multiset(list, no).format(element = ::formatValue), "three tokens of NO")
+    }
+
+    @Test
+    fun aListVariableOnAPlaceOfElementsIsEvaluatedNotMatched() {
+        // Garvik's two-phase commit: `workers : Workers` removes every acknowledgement in the list
+        // (reference/garvik-2022/README.md). Matching it against one Worker token never succeeds.
+        val inscriptions = inscriptions("colset W = int; colset WS = list W; var w : W; var workers : WS;")
+        val w = inscriptions.interpreter.colourSets["W"]!!
+        val ws = inscriptions.interpreter.colourSets["WS"]!!
+        val expr = parser.parseExpression(SourceText("a", "workers"))
+        val onElements = inscriptions.arc(expr, w)
+        assertFalse(onElements is PatternInscription<*>, "bound elsewhere, then evaluated")
+        val workers = inscriptions.variables.getValue("workers")
+        assertEquals("1`1++1`2", onElements.evaluate(Binding.of(workers to listOf(1, 2))).format(element = ::formatValue))
+        assertTrue(inscriptions.arc(expr, ws) is PatternInscription<*>, "on a place of lists it binds from a token")
+        assertTrue(inscriptions.arc(parser.parseExpression(SourceText("a", "w")), w) is PatternInscription<*>)
     }
 
     @Test

@@ -1,0 +1,527 @@
+{
+ "format": "cpn-document",
+ "version": 1,
+ "name": "SimpleProtocol",
+ "declarations": "(* Standard declarations *)\ncolset UNIT = unit;\ncolset INT = int;\ncolset BOOL = bool;\ncolset STRING = string;\n(* block *)\ncolset DATA = STRING;\ncolset NO = INT;\ncolset NOxDATA = product NO * DATA;\nvar n,k : NO;\nvar d, data : DATA;\nvar success : BOOL;\nval stop = \"########\";\nval AllPackets = 1`(1,\"Modellin\") ++ 1`(2,\"g and An\") ++ 1`(3,\"alysis##\") ++ 1`(4,stop);\n",
+ "pages": [
+  {
+   "id": "ID6",
+   "name": "Protocol",
+   "places": [
+    {
+     "id": "ID1784",
+     "name": "Packets\nTo Send",
+     "colset": "NOxDATA",
+     "init": "AllPackets",
+     "x": 124,
+     "y": -115,
+     "w": 84,
+     "h": 41,
+     "colsetAt": [
+      62,
+      -90
+     ],
+     "initAt": [
+      59.5,
+      -139
+     ]
+    },
+    {
+     "id": "ID2075",
+     "name": "B",
+     "colset": "NOxDATA",
+     "init": "",
+     "x": 551,
+     "y": 0,
+     "w": 31,
+     "h": 31,
+     "colsetAt": [
+      551,
+      26.5
+     ],
+     "initAt": [
+      596,
+      -20
+     ]
+    },
+    {
+     "id": "ID30103",
+     "name": "Data\nReceived",
+     "colset": "DATA",
+     "init": "1`\"\"",
+     "x": 707,
+     "y": -115,
+     "w": 84,
+     "h": 41,
+     "colsetAt": [
+      755,
+      -90
+     ],
+     "initAt": [
+      753,
+      -139
+     ]
+    },
+    {
+     "id": "ID42977",
+     "name": "NextSend",
+     "colset": "NO",
+     "init": "1`1",
+     "x": 124,
+     "y": 122,
+     "w": 69,
+     "h": 31,
+     "colsetAt": [
+      160.5,
+      142
+     ],
+     "initAt": [
+      163,
+      101
+     ]
+    },
+    {
+     "id": "ID50497",
+     "name": "A",
+     "colset": "NOxDATA",
+     "init": "",
+     "x": 273,
+     "y": 0,
+     "w": 31,
+     "h": 31,
+     "colsetAt": [
+      273,
+      26.5
+     ],
+     "initAt": [
+      318,
+      -20
+     ]
+    },
+    {
+     "id": "ID50747",
+     "name": "D",
+     "colset": "NO",
+     "init": "",
+     "x": 273,
+     "y": 241,
+     "w": 31,
+     "h": 31,
+     "colsetAt": [
+      273,
+      267.5
+     ],
+     "initAt": [
+      318,
+      220
+     ]
+    },
+    {
+     "id": "ID50992",
+     "name": "C",
+     "colset": "NO",
+     "init": "",
+     "x": 551,
+     "y": 241,
+     "w": 31,
+     "h": 31,
+     "colsetAt": [
+      551,
+      267.5
+     ],
+     "initAt": [
+      596,
+      220
+     ]
+    },
+    {
+     "id": "ID170188",
+     "name": "NextRec",
+     "colset": "NO",
+     "init": "1`1",
+     "x": 486,
+     "y": 122,
+     "w": 69,
+     "h": 31,
+     "colsetAt": [
+      448.5,
+      142
+     ],
+     "initAt": [
+      446,
+      101
+     ]
+    },
+    {
+     "id": "ID405021",
+     "name": "Limit",
+     "colset": "UNIT",
+     "init": "2`()",
+     "x": 273,
+     "y": 122,
+     "w": 68,
+     "h": 28,
+     "colsetAt": [
+      273,
+      147
+     ],
+     "initAt": [
+      273,
+      97
+     ]
+    }
+   ],
+   "transitions": [
+    {
+     "id": "ID1794",
+     "name": "Send\nPacket",
+     "guard": "",
+     "x": 124,
+     "y": 0,
+     "w": 72,
+     "h": 41,
+     "guardAt": [
+      79,
+      -31.5
+     ],
+     "timeAt": [
+      174.5,
+      -31.5
+     ]
+    },
+    {
+     "id": "ID1992",
+     "name": "Transmit\nPacket",
+     "guard": "",
+     "x": 411,
+     "y": 0,
+     "w": 72,
+     "h": 41,
+     "guardAt": [
+      366,
+      -31.5
+     ],
+     "timeAt": [
+      461.5,
+      -31.5
+     ]
+    },
+    {
+     "id": "ID2171",
+     "name": "Receive\nPacket",
+     "guard": "",
+     "x": 615,
+     "y": 122,
+     "w": 72,
+     "h": 41,
+     "guardAt": [
+      570,
+      90.5
+     ],
+     "timeAt": [
+      665.5,
+      90.5
+     ]
+    },
+    {
+     "id": "ID62581",
+     "name": "Transmit\nAck",
+     "guard": "",
+     "x": 411,
+     "y": 241,
+     "w": 72,
+     "h": 41,
+     "guardAt": [
+      366,
+      209.5
+     ],
+     "timeAt": [
+      461.5,
+      209.5
+     ]
+    },
+    {
+     "id": "ID92262",
+     "name": "Receive\nAck",
+     "guard": "",
+     "x": 124,
+     "y": 241,
+     "w": 72,
+     "h": 41,
+     "guardAt": [
+      79,
+      209.5
+     ],
+     "timeAt": [
+      174.5,
+      209.5
+     ]
+    }
+   ],
+   "arcs": [
+    {
+     "id": "ID1815",
+     "place": "ID1784",
+     "transition": "ID1794",
+     "direction": "both",
+     "inscription": "(n,d)",
+     "labelAt": [
+      105,
+      -60
+     ]
+    },
+    {
+     "id": "ID2118",
+     "place": "ID2075",
+     "transition": "ID1992",
+     "direction": "out",
+     "inscription": "if success\nthen 1`(n,d)\nelse empty",
+     "labelAt": [
+      495,
+      -25
+     ]
+    },
+    {
+     "id": "ID2219",
+     "place": "ID2075",
+     "transition": "ID2171",
+     "direction": "in",
+     "inscription": "(n,d)",
+     "labelAt": [
+      607,
+      -10
+     ],
+     "bends": [
+      [
+       615,
+       0
+      ]
+     ]
+    },
+    {
+     "id": "ID34836",
+     "place": "ID30103",
+     "transition": "ID2171",
+     "direction": "out",
+     "inscription": "if n=k andalso d<>stop\nthen data^d\nelse data",
+     "labelAt": [
+      751,
+      66
+     ],
+     "bends": [
+      [
+       707,
+       122
+      ]
+     ]
+    },
+    {
+     "id": "ID43142",
+     "place": "ID42977",
+     "transition": "ID1794",
+     "direction": "both",
+     "inscription": "n",
+     "labelAt": [
+      114,
+      61
+     ]
+    },
+    {
+     "id": "ID52793",
+     "place": "ID50497",
+     "transition": "ID1794",
+     "direction": "out",
+     "inscription": "(n,d)",
+     "labelAt": [
+      202,
+      -13
+     ]
+    },
+    {
+     "id": "ID53369",
+     "place": "ID50497",
+     "transition": "ID1992",
+     "direction": "in",
+     "inscription": "(n,d)",
+     "labelAt": [
+      321,
+      -13
+     ]
+    },
+    {
+     "id": "ID59092",
+     "place": "ID50992",
+     "transition": "ID2171",
+     "direction": "out",
+     "inscription": "if n=k\nthen k+1\nelse k",
+     "labelAt": [
+      647.5,
+      218
+     ],
+     "bends": [
+      [
+       615,
+       241
+      ]
+     ]
+    },
+    {
+     "id": "ID62912",
+     "place": "ID50992",
+     "transition": "ID62581",
+     "direction": "in",
+     "inscription": "n",
+     "labelAt": [
+      497,
+      251
+     ]
+    },
+    {
+     "id": "ID86929",
+     "place": "ID50747",
+     "transition": "ID62581",
+     "direction": "out",
+     "inscription": "if success\nthen 1`n\nelse empty",
+     "labelAt": [
+      337,
+      266
+     ]
+    },
+    {
+     "id": "ID92862",
+     "place": "ID50747",
+     "transition": "ID92262",
+     "direction": "in",
+     "inscription": "n",
+     "labelAt": [
+      213,
+      251
+     ]
+    },
+    {
+     "id": "ID93258",
+     "place": "ID42977",
+     "transition": "ID92262",
+     "direction": "out",
+     "inscription": "n",
+     "labelAt": [
+      139,
+      182
+     ],
+     "bends": [
+      [
+       130.899599,
+       186
+      ]
+     ]
+    },
+    {
+     "id": "ID167655",
+     "place": "ID30103",
+     "transition": "ID2171",
+     "direction": "in",
+     "inscription": "data",
+     "labelAt": [
+      660.5,
+      51
+     ]
+    },
+    {
+     "id": "ID174711",
+     "place": "ID170188",
+     "transition": "ID2171",
+     "direction": "in",
+     "inscription": "k",
+     "labelAt": [
+      546,
+      104
+     ],
+     "bends": [
+      [
+       532,
+       115
+      ]
+     ]
+    },
+    {
+     "id": "ID185760",
+     "place": "ID170188",
+     "transition": "ID2171",
+     "direction": "out",
+     "inscription": "if n=k\nthen k+1\nelse k",
+     "labelAt": [
+      552,
+      155
+     ],
+     "bends": [
+      [
+       532,
+       129
+      ]
+     ]
+    },
+    {
+     "id": "ID241098",
+     "place": "ID42977",
+     "transition": "ID92262",
+     "direction": "in",
+     "inscription": "k",
+     "labelAt": [
+      108.5,
+      183
+     ],
+     "bends": [
+      [
+       116.899599,
+       174
+      ]
+     ]
+    },
+    {
+     "id": "ID406242",
+     "place": "ID405021",
+     "transition": "ID1794",
+     "direction": "in",
+     "inscription": "()",
+     "labelAt": [
+      213,
+      55
+     ]
+    },
+    {
+     "id": "ID407056",
+     "place": "ID405021",
+     "transition": "ID92262",
+     "direction": "out",
+     "inscription": "()",
+     "labelAt": [
+      209,
+      157
+     ]
+    },
+    {
+     "id": "ID408001",
+     "place": "ID405021",
+     "transition": "ID1992",
+     "direction": "out",
+     "inscription": "if success\nthen empty\nelse 1`()",
+     "labelAt": [
+      397,
+      67
+     ]
+    },
+    {
+     "id": "ID408969",
+     "place": "ID405021",
+     "transition": "ID62581",
+     "direction": "out",
+     "inscription": "if success\nthen empty\nelse 1`()",
+     "labelAt": [
+      398,
+      175
+     ]
+    }
+   ]
+  }
+ ]
+}
