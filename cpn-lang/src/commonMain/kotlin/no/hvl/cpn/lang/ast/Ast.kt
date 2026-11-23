@@ -47,7 +47,8 @@ public data class LongIdent(
 ) : Node() {
     public constructor(name: String) : this(emptyList(), name)
 
-    val text: String get() = (qualifiers + name).joinToString(".")
+    /** `List.map`; computed once, since the interpreter looks names up by it on every evaluation. */
+    val text: String = if (qualifiers.isEmpty()) name else (qualifiers + name).joinToString(".")
 
     override fun toString(): String = text
 }

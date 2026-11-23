@@ -35,8 +35,10 @@ One engine, written once in Kotlin Multiplatform, that:
 2. **runs existing models**: it reads and writes CPN Tools `.cpn` files, and gives the same
    behaviour as CPN Tools on them (untimed and timed nets);
 3. **analyses models**: state space and the CPN Tools standard report;
-4. **offers a second inscription syntax**: a Python-like syntax with the same meaning as CPN ML;
-5. **has an app on top**: a desktop and web editor and simulator (in the style of draw.io) that uses
+4. **connects models to data**: Standard ML stays the inscription language, and functions written in
+   Python can be called from a model, for example delays fitted to real data (F13);
+5. **produces performance reports** from repeated timed simulations, for planning (F14);
+6. **has an app on top**: a desktop and web editor and simulator (in the style of draw.io) that uses
    only the public engine, so it never behaves differently from the command line.
 
 ## Research questions
@@ -48,8 +50,19 @@ One engine, written once in Kotlin Multiplatform, that:
   share of a corpus of `.cpn` models that import, simulate and give the same state space as CPN
   Tools; by `.cpn` files that survive repeated import/export; and by `.cpn` files written by us that
   open in CPN Tools.
-  A second part: is the Python-like syntax easier to use? Measured in a small user study.
-- **RQ3, performance:** how fast is it compared to CPN Tools and across platforms?
+- **RQ3, performance:** how fast is it compared to CPN Tools, to Garvik's compiled F# simulator,
+  and across platforms? Measured by repeating Garvik's experiments ([performance.md](performance.md)).
+- **RQ4, use in practice:** can a domain model, a pathology lab with delays from data, give a
+  performance report useful for planning? (F13–F15)
+- **Reflection:** how was AI used to build the tool, how was its work checked, and when was it
+  accepted? ([ai-process.md](ai-process.md))
+
+## What the thesis delivers
+
+1. **The tool**: more features than the earlier HVL tools and better performance
+   ([comparison.md](comparison.md), [performance.md](performance.md)).
+2. **A reflection on using AI** to build it ([ai-process.md](ai-process.md)).
+3. **A real-world use case**: a pathology lab model with a performance report (F15).
 
 ## Success looks like
 
@@ -63,8 +76,8 @@ One engine, written once in Kotlin Multiplatform, that:
 
 ## Out of scope
 
-- Being a drop-in replacement for every CPN Tools feature, for example monitors, performance
-  reports and Access/CPN extensions. What we leave out is listed in
+- Being a drop-in replacement for every CPN Tools feature, for example Access/CPN extensions or
+  CPN Tools' own SML monitor code. What we leave out is listed in
   [feature-spec.md](feature-spec.md#out-of-scope).
 - Full Standard ML. We support the subset that models actually use (decision D4).
 - A hosted multi-user service.

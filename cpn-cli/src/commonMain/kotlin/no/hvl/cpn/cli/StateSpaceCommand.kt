@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.int
@@ -37,6 +38,10 @@ class StateSpaceCommand(
     private val maxArcs by option("--max-arcs", help = "Stop after this many arcs").int().restrictTo(min = 1).default(10_000_000)
     private val maxSeconds by option("--max-seconds", help = "Stop after this many seconds").int().restrictTo(min = 1)
     private val format by option("--format", "-f", help = "Output format").choice("text", "json").default("text")
+    private val values by option(
+        "--set",
+        help = "Set a value declared in the model, e.g. --set W=3 for 'val W = ...;' (repeatable)",
+    ).multiple()
     private val report by option(
         "--report",
         "-r",
@@ -49,7 +54,9 @@ class StateSpaceCommand(
     override fun run() {
         val bytes =
             try {
-                readFile(file)
+                setValues(readFile(file), values.map(::parseSet), file)
+            } catch (e: CliktError) {
+                throw e
             } catch (e: Exception) {
                 throw CliktError("Cannot read '$file': ${e.message}", statusCode = 1)
             }

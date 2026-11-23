@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.int
@@ -45,6 +46,10 @@ class SimulateCommand(
         help = "Random seed; the same seed gives the same run on every platform. Random if omitted.",
     ).long()
     private val format by option("--format", "-f", help = "Output format").choice("text", "json").default("text")
+    private val values by option(
+        "--set",
+        help = "Set a value declared in the model, e.g. --set W=3 for 'val W = ...;' (repeatable)",
+    ).multiple()
     private val trace by option("--trace", help = "Print every step (default)").flag("--no-trace", default = true)
 
     override fun help(context: Context): String = "Run an automatic simulation and print the trace and final marking."
@@ -52,7 +57,7 @@ class SimulateCommand(
     override fun run() {
         val net = load()
         val usedSeed = seed ?: Random.nextLong()
-        val simulator = modelErrors { Simulator(net, usedSeed) }
+        val simulator = modelErrors { Simulator(net, usedSeed, keepTrace = trace) }
         val result = modelErrors { simulator.run(steps) }
         when (format) {
             "json" -> echo(json(simulator, result, usedSeed))
@@ -63,7 +68,9 @@ class SimulateCommand(
     private fun load(): Net {
         val bytes =
             try {
-                readFile(file)
+                setValues(readFile(file), values.map(::parseSet), file)
+            } catch (e: CliktError) {
+                throw e
             } catch (e: Exception) {
                 throw CliktError("Cannot read '$file': ${e.message}", statusCode = MODEL_ERROR)
             }

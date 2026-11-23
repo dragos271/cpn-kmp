@@ -77,6 +77,10 @@ class CpnCommandTest {
             "countdown.cpnd" to document,
             "divide.cpnd" to document.replace("fun dec n = n - 1;", "fun dec n = n div 0;"),
             "broken.json" to """{"name": "X", "pages": []}""",
+            "start.cpnd" to
+                document
+                    .replace("colset N = int with 0..3;", "val START = 3; colset N = int with 0..9;")
+                    .replace("\"init\": \"1`3\"", "\"init\": \"1`START\""),
         )
 
     /** Files written by `cpn convert`, which later commands can read. */
@@ -248,6 +252,42 @@ class CpnCommandTest {
         val broken = cpn().test("simulate broken.json")
         assertEquals(1, broken.statusCode)
         assertTrue("broken.json: pages: a net needs at least one page" in broken.stderr, broken.stderr)
+    }
+
+    @Test
+    fun setChangesADeclaredValue() {
+        // Counting down from START gives START + 1 markings.
+        val three = Json.parseToJsonElement(cpn().test("statespace start.cpnd --format json").stdout).jsonObject
+        assertEquals(4, three["nodes"]!!.jsonPrimitive.int)
+        val six = cpn().test("statespace start.cpnd --set START=6 --format json")
+        assertEquals(0, six.statusCode, six.stderr)
+        assertEquals(
+            7,
+            Json
+                .parseToJsonElement(six.stdout)
+                .jsonObject["nodes"]!!
+                .jsonPrimitive.int,
+        )
+        assertTrue("Stopped after 6 steps" in cpn().test("simulate start.cpnd --set START=6 --no-trace").stdout)
+
+        val missing = cpn().test("statespace start.cpnd --set WORKERS=2")
+        assertEquals(1, missing.statusCode)
+        assertTrue("no 'val WORKERS = ...;' declaration" in missing.stderr, missing.stderr)
+        assertTrue(cpn().test("statespace start.cpnd --set START").statusCode != 0, "NAME=VALUE is required")
+    }
+
+    @Test
+    fun benchTimesSimulationAndStateSpace() {
+        val result = cpn().test("bench start.cpnd --steps 2,10 --repeat 3 --warmup 0 --state-space --format json")
+        assertEquals(0, result.statusCode, result.stderr)
+        val json = Json.parseToJsonElement(result.stdout).jsonObject
+        val runs = json["simulation"]!!.jsonArray
+        assertEquals(listOf(2, 10), runs.map { it.jsonObject["steps"]!!.jsonPrimitive.int })
+        assertEquals(3, runs[0].jsonObject["seconds"]!!.jsonArray.size)
+        assertEquals("false", runs[0].jsonObject["stoppedEarly"]!!.jsonPrimitive.content)
+        assertEquals("true", runs[1].jsonObject["stoppedEarly"]!!.jsonPrimitive.content, "the countdown is dead after 3 steps")
+        assertEquals(4, json["stateSpace"]!!.jsonObject["nodes"]!!.jsonPrimitive.int)
+        assertTrue("steps:" in cpn().test("bench start.cpnd --steps 2 --repeat 1 --warmup 0").stdout)
     }
 
     @Test

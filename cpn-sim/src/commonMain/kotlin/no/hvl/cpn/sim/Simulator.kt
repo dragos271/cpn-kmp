@@ -49,6 +49,8 @@ public class Simulator(
     net: Net,
     public val seed: Long = 0,
     maxEnumeration: Int = 100,
+    /** False for long runs (benchmarks, performance studies): [trace] then stays empty. */
+    public val keepTrace: Boolean = true,
 ) {
     public val flatNet: FlatNet = net.flatten()
     public val semantics: Semantics = Semantics(flatNet.net)
@@ -56,14 +58,15 @@ public class Simulator(
 
     private var random = SplitMix64(seed)
     private val history = mutableListOf<Occurrence>()
+    private var steps = 0
 
     public var marking: Marking = semantics.initialMarking
         private set
 
     /** Number of steps fired since creation or the last [reset]. */
-    public val stepCount: Int get() = history.size
+    public val stepCount: Int get() = steps
 
-    /** All occurrences since creation or the last [reset]. */
+    /** All occurrences since creation or the last [reset]; empty unless [keepTrace]. */
     public val trace: List<Occurrence> get() = history.toList()
 
     /** Flat transition by its CPN Tools name, e.g. `"Protocol'SendPacket 1"`. */
@@ -152,11 +155,13 @@ public class Simulator(
         marking = semantics.initialMarking
         random = SplitMix64(seed)
         history.clear()
+        steps = 0
     }
 
     private fun record(element: BindingElement): Occurrence {
         val time = if (semantics.net.isTimed) marking.time else null
         marking = semantics.fire(element, marking)
-        return Occurrence(history.size + 1, element, time).also { history += it }
+        steps++
+        return Occurrence(steps, element, time).also { if (keepTrace) history += it }
     }
 }

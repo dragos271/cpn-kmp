@@ -193,6 +193,10 @@ Out: symmetry and equivalence reductions, the sweep-line method, and CTL/ASK-CTL
 - Sizes and report values are checked independently on textbook models: the limit protocol has 13,215 nodes,
   52,784 arcs and 5,013 SCCs.
 - Example reports are in [reports/](reports/).
+- Node and arc counts equal CPN Tools on 11 models, using the CPN Tools reports in Garvik's
+  thesis ([reference/garvik-2022](../reference/garvik-2022/README.md), `CpnToolsReferenceTest`).
+  That covers the counts part of the DoD for those models; the other report values still need
+  CPN Tools output (T4.1).
 
 ## F9 Python-like inscription syntax
 
@@ -204,7 +208,9 @@ and evaluation are shared.
 - The same model written in both syntaxes gives an identical AST.
 - There is a translator from SML to the new syntax.
 
-**Status: not started** (T2.6–T2.8).
+**Status: on hold.** At the latest supervisor meeting the direction changed: inscriptions stay
+Standard ML, as in CPN Tools, and Python comes in as the language for *external functions* (F13).
+To confirm with the supervisor before F9 is dropped.
 
 ## F10 Diagnostics
 
@@ -239,13 +245,92 @@ and evaluation are shared.
 **Status: partial.** The corpus is done (T3.5): 49 models, listed in `corpus/manifest.json` with their source
 and the features they use. The golden outputs from CPN Tools wait for T4.1.
 
+## F13 External functions in Python
+
+**Why.** In a real model some values come from data, not from the modeller. In the pathology lab
+(F15), how long sectioning takes depends on the specimen, the worker and the day; a lab worker who
+has fitted those times in Python should be able to hand over a function, `delay_section`, that the
+model calls, instead of the modeller typing a delay into every transition.
+
+**Scope.** In:
+- a declaration that binds a CPN ML name to a Python function, with a CPN ML type:
+  ```sml
+  fun delaySection (s : SPECIMEN, w : WORKER) : int = 30 (* @python lab_delays.delay_section *)
+  ```
+  The body is an ordinary SML fallback, so the file still opens and runs in CPN Tools; our tool
+  calls the Python function instead (decision to confirm: annotation in a comment vs. a new
+  `extern` keyword, which CPN Tools would reject);
+- values passed as JSON: `int`, `real`, `string`, `bool`, enumerations (as strings), products and
+  lists (as arrays), records (as objects), unions (as `{"tag": ..., "value": ...}`);
+- checks: the result is type-checked against the declared type, and an error says which function
+  returned what, at which step;
+- reproducibility: the Python side gets a seed derived from the simulation seed, so a seeded run
+  gives the same trace again (with the same Python packages);
+- runtime: on the JVM and native, a Python process started once per simulation and talked to over
+  standard input/output; in the browser, Pyodide (later).
+
+Out: Python in inscriptions themselves (that was F9); calling the engine *from* Python (a possible
+later Python package).
+
+**DoD.**
+- A model with an external delay function runs from `cpn simulate` and in the desktop app.
+- The same model, with the fallback body, opens and runs in CPN Tools unchanged.
+- A wrong return type, an exception in Python, and a missing module each give a located error.
+- Overhead per call is measured and reported in [performance.md](performance.md).
+
+**Status: not started** (design above to agree with the supervisor).
+
+## F14 Performance report from simulation
+
+**Why.** The end goal of the pathology case is a report that supports planning: for example, how
+turnaround time changes with one more lab worker. CPN Tools does this with monitors and its
+performance report; Garvik's tool and ours do not yet.
+
+**Scope.** In:
+- data collectors on places and transitions (CPN Tools "monitors"): counts, token waiting times,
+  queue lengths, resource utilisation;
+- batch runs: N independent replications with different seeds, each until a stop time or step
+  count;
+- `cpn perf model.cpn --replications 30 --until 10000`, writing a report (Markdown/HTML and JSON)
+  with mean, standard deviation and 95 % confidence interval per measure;
+- parameter sweeps with `--set` (e.g. `--set WORKERS=3,4,5`), so scenarios can be compared side by
+  side.
+
+Out: CPN Tools' own monitor code (SML functions written into `.cpn` files) at first; importing those
+is a later step.
+
+**DoD.**
+- On a textbook queueing model (M/M/1 as a CPN), the reported mean waiting time is within the
+  confidence interval of the analytical value.
+- Replications are reproducible from the seed on every platform.
+- The pathology model (F15) produces a report with turnaround time per specimen type.
+
+**Status: not started.** `cpn bench` and `--set` (2026-11-23) are the first pieces.
+
+## F15 Real-world case: pathology lab
+
+**Why.** To show the tool on a real process, not only on textbook models.
+
+**Scope.** A timed, hierarchical CPN of the specimen flow in a pathology lab: reception and
+registration, grossing, tissue processing (batch, overnight), embedding, sectioning, staining,
+scanning, diagnosis by a pathologist and reporting. Workers, pathologists and machines are
+resources; delays come from external Python functions (F13) fitted to lab data; the output is the
+performance report (F14): turnaround time, queue lengths, utilisation, and what-if scenarios.
+
+**DoD.**
+- The model runs in our tool and, with fallback delays, in CPN Tools.
+- The lab confirms that the process structure is right (validation by a domain expert).
+- At least two what-if scenarios are compared in a report.
+
+**Status: not started.** Needs: which lab, access to (anonymised) timing data, and whether an
+ethics or data-protection approval is needed.
+
 ---
 
 ## Out of scope
 
 | Feature | Why |
 |---|---|
-| Monitors, performance reports, batch simulation replications | Not needed for RQ1–RQ3 |
 | Access/CPN extension protocol | We are the engine; we don't plug into CPN Tools |
 | Full SML (modules and functors) | Not used in the model corpus (D4) |
 | Real-valued time | The supervisor asked for integer time; CPN Tools models rarely need more |
@@ -260,5 +345,10 @@ and the features they use. The golden outputs from CPN Tools wait for T4.1.
   corpus models, including MQTT and Paxos. Should we support them?
 - **Monitors:** 6 corpus models have monitors. The plan is to import them and keep them, without
   running them.
+- **Python external functions (F13):** annotation in an SML comment (the file still opens in CPN
+  Tools) or a new `extern` declaration? And is F9 (a Python-like syntax for inscriptions) dropped?
+- **Pathology lab (F15):** which lab, what data can be used, and is an ethics or data-protection
+  approval needed?
 - **Earlier tools:** we need access to Gjesdal's editor (`smartoceanplatform/cpn-editor`, private)
-  and to Garvik's F# simulator, to run them and complete [comparison.md](comparison.md).
+  to run it and complete [comparison.md](comparison.md). Garvik's F# simulator was received and
+  run on 2026-11-23 ([performance.md](performance.md)).

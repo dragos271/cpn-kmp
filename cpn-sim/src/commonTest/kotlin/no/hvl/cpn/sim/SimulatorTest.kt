@@ -73,6 +73,18 @@ class SimulatorTest {
     }
 
     @Test
+    fun withoutATraceTheRunIsTheSame() {
+        // Long runs (cpn bench, performance studies) keep no trace, but must not change the run.
+        val kept = simulator(seed = 42).apply { run(200) }
+        val notKept = Simulator(protocol.net, 42, keepTrace = false)
+        val last = generateSequence { notKept.step() }.take(200).last()
+        assertEquals(emptyList(), notKept.trace)
+        assertEquals(kept.stepCount, notKept.stepCount)
+        assertEquals(kept.trace.last().toString(), last.toString(), "the same last occurrence, with its step number")
+        assertEquals(kept.marking.toString(), notKept.marking.toString())
+    }
+
+    @Test
     fun runStopsWhenTheConditionHolds() {
         val sim = simulator(seed = 1)
         val page = protocol.net.page("Protocol")

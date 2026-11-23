@@ -41,6 +41,8 @@ cpn-cli/build/install/cpn-jvm/bin/cpn simulate corpus/cpnbook/models/chapter2/2-
 cpn-cli/build/install/cpn-jvm/bin/cpn convert interop/models/hierarchical.cpnd --to cpn -o hierarchical.cpn   # for CPN Tools
 cpn-cli/build/install/cpn-jvm/bin/cpn statespace corpus/cpnbook/models/chapter7/7-2LimitProtocol.cpn   # 13215 nodes
 cpn-cli/build/install/cpn-jvm/bin/cpn statespace corpus/cpnbook/models/chapter7/7-2LimitProtocol.cpn --report   # standard report
+cpn-cli/build/install/cpn-jvm/bin/cpn statespace reference/garvik-2022/two-phase-commit.cpnd --set W=4   # change a declared value: 2323 nodes
+cpn-cli/build/install/cpn-jvm/bin/cpn bench reference/garvik-2022/two-phase-commit.cpnd -n 500000,1000000 --state-space   # timings
 ```
 
 ### The app (desktop and web)

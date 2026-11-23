@@ -137,6 +137,14 @@ Tests the AI wrote can share the AI's misunderstanding. An independent reference
   rebuilt from CPN ML text must give identical traces.
 - **The textbook.** The expected enabled bindings for the Jensen & Kristensen examples come from
   the book.
+- **CPN Tools, through Garvik's thesis.** His Appendix B has CPN Tools state space reports for
+  11 models. We rebuilt the models and get the same nodes and arcs for all 11
+  ([reference/garvik-2022](../reference/garvik-2022/README.md)). The first run had the right nodes
+  but too few arcs for the two-phase commit, which pointed straight at a bug no test had found.
+- **The other tool, on the same machine.** Comparing our times with the times printed in Garvik's
+  thesis made ours look 1.0–2.2× faster at simulation. Running his tool on the same machine showed
+  the opposite for most models ([performance.md](performance.md)). Numbers from a paper are not an
+  oracle for performance: only a measurement under the same conditions is.
 - **CPN Tools.** This is the strongest check. Golden outputs from CPN Tools (T4.1) for the corpus
   (T3.5) will be compared automatically (T4.2), and `.cpn` files we export are opened in CPN Tools
   by hand, with each check recorded (F5).
@@ -178,3 +186,5 @@ This list is kept for the thesis's discussion of threats to validity.
 | Round-trip test (corpus) | The parser read `with a \| b \| timed` as a constant called `timed`, so the colour set was untimed | T3.1b |
 | CLI test (compact XML) | The writer re-indented parsed elements that had no whitespace, so the file changed | T3.1b |
 | Round-trip test (corpus) | Untouched exports changed 17 files: CPN Tools 1.5 ids (`id65`), creation-ordered instances, fusion elements that disagree with place labels | T3.1b |
+| CPN Tools state space sizes (Garvik's Appendix B) | A list variable on an arc from a place of its elements (`workers` on `Acknowledge`) was matched against one token, so the transition was never enabled. 35 corpus models ran and every test was green | 2026-11-11 |
+| Profiling while repeating Garvik's benchmark | Every identifier lookup rebuilt the name with `joinToString`: 40 % of simulation time on the dining philosophers. Correct, so no test could see it; only a measurement against another tool did | 2026-11-23 |
