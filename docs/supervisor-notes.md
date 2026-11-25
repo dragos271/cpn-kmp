@@ -28,22 +28,32 @@ the start of each task and update it at the end.
 | 2.1 | Compare with Andreas Garvik's thesis: check their performance analysis and apply the same to my tool | ✅ both tools on the same machine | [performance.md](performance.md) |
 | 2.2 | Matrix table of language features, compared with CPN Tools and Andreas's tool | ✅ | [comparison.md](comparison.md#language-features-cpn-tools-garvik-and-ours) |
 | 2.3 | Standard ML functions stay the standard | ✅ inscriptions stay CPN ML | [vision.md](vision.md) |
-| 2.4 | External functions in Python, e.g. a `delay-section` function written by a lab worker from data, instead of typing each delay by hand | ⏳ specified, not built | F13 |
-| 2.5 | End goal: a performance report usable for planning | 🟡 `cpn perf` done and checked against queueing theory; the lab model is next | F14, [performance-reports.md](performance-reports.md) |
+| 2.4 | External functions in Python, e.g. a `delay-section` function written by a lab worker from data, instead of typing each delay by hand | ✅ `(* @python patholab.py delay_section *)` before a CPN ML function; the file still opens in CPN Tools (2026-11-25) | F13, [python-functions.md](python-functions.md) |
+| 2.5 | End goal: a performance report usable for planning | ✅ `cpn perf` and the app's Analyse mode, checked against queueing theory; what-if scenarios on the pathology lab example | F14, [performance-reports.md](performance-reports.md) |
 | 2.6 | Start by completing the matrix, then compare model and performance against Andreas's thesis and CPN Tools | ✅ against Garvik. 🟡 CPN Tools: only the times in Garvik's Appendix B; not run by us | [performance.md](performance.md) |
-| 2.7 | Performance analysis case | 🟡 reports done (F14); the pathology lab case (F15) is next | F14, F15 |
+| 2.7 | Performance analysis case | ✅ the whiteboard sketch of the pathology lab, runnable, with a Python `delay_section` and a what-if report | F15, [examples/pathology-lab](../examples/pathology-lab/README.md) |
 | 2.8 | Later we might get access to Andreas's tool | ✅ received and run 2026-11-23 | |
 | 2.9 | Have the thesis template ready | ⏳ **waiting for the student to send the template** | [thesis/outline.md](../thesis/outline.md) |
 | 2.10 | Dump material from DAT300 into the thesis | ⏳ **waiting for the DAT300 material** | [thesis/outline.md](../thesis/outline.md) |
-| 2.11 | Thesis deliverable 1: the tool, with more features and better performance | ✅ more features; faster than Garvik's tool on the same machine: simulation 1.7–3.4×, state space up to hundreds of times (2026-11-25) | [performance.md](performance.md) |
+| 2.11 | Thesis deliverable 1: the tool, with more features and better performance | ✅ more features; faster than Garvik's tool on the same machine: simulation 1.6–4×, state space up to hundreds of times (2026-11-25) | [performance.md](performance.md) |
 | 2.12 | Thesis deliverable 2: reflection on the use of AI | 🟡 material collected, chapter not written | [ai-process.md](ai-process.md) |
-| 2.13 | Thesis deliverable 3: real-world use case, a pathology lab | ⏳ F15. Data and ethics: cleared (the supervisor works with the lab) | F15 |
+| 2.13 | Thesis deliverable 3: real-world use case, a pathology lab | ✅ the supervisor's sketch as a runnable use case of the general features (2026-11-25); it illustrates use in his lab, nothing is built for the lab itself | F15 |
+
+## Whiteboard at the meeting of 2026-11-23
+
+The supervisor's drawing: a CPN of the lab (Arrival → Registration → Grossing → Block → Processing
+`@+24hrs` → Embedding → Sectioning with a worker pool `(23,5)`, `(42,10)` and `@+ delay_section` →
+Slide → Staining → Scanned → Cases → Microscopy → Answered, with "Order more"); next to
+`delay_section`: "CPN Tools: standard ML function" and "external tool calling, e.g. Python"; the
+comparison table with Andreas's thesis (editing, execution, state space, Python, language
+features, time) and "Comparison: performance"; and the thesis: tool (more features, performance),
+reflection about AI use, real-world use case: pathology lab. The lab drawing illustrates use; it is
+not a request to build for the lab (clarified by the student, 2026-11-25).
 
 ## Open items, in order
 
 1. ~~Faster simulation (2.11)~~ done 2026-11-25.
 2. ~~F14 performance reports (2.5, 2.7)~~ `cpn perf` done 2026-11-25.
-3. F13 Python external functions (2.4), then the pathology lab model (2.13): needs the lab's
-   process description and timing data.
+3. ~~F13 Python external functions (2.4) and the pathology lab use case (2.13)~~ done 2026-11-25.
 4. Open the exported `.cpn` files in CPN Tools (1.5), and time CPN Tools ourselves (2.6).
 5. Thesis template and DAT300 material (2.9, 2.10): waiting for the student.

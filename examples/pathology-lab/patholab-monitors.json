@@ -1,0 +1,42 @@
+{
+ "monitors": [
+  {
+   "name": "Turnaround (min)",
+   "type": "observe",
+   "transition": "Answered",
+   "expression": "intTime () - #arrived c"
+  },
+  {
+   "name": "Cases answered (per minute)",
+   "type": "occurrences",
+   "transition": "Answered"
+  },
+  {
+   "name": "More slides ordered (per minute)",
+   "type": "occurrences",
+   "transition": "Order more"
+  },
+  {
+   "name": "Waiting for grossing",
+   "type": "marking-size",
+   "places": [
+    "Registered"
+   ]
+  },
+  {
+   "name": "Waiting for sectioning",
+   "type": "marking-size",
+   "places": [
+    "Embedded"
+   ]
+  },
+  {
+   "name": "Idle workers",
+   "type": "marking-size",
+   "places": [
+    "Worker pool"
+   ],
+   "available": true
+  }
+ ]
+}

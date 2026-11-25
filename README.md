@@ -44,6 +44,7 @@ cpn-cli/build/install/cpn-jvm/bin/cpn statespace corpus/cpnbook/models/chapter7/
 cpn-cli/build/install/cpn-jvm/bin/cpn statespace reference/garvik-2022/two-phase-commit.cpnd --set W=4   # change a declared value: 2323 nodes
 cpn-cli/build/install/cpn-jvm/bin/cpn bench reference/garvik-2022/two-phase-commit.cpnd -n 500000,1000000 --state-space   # timings
 cpn-cli/build/install/cpn-jvm/bin/cpn perf examples/perf/mm1.cpnd -m examples/perf/mm1-monitors.json -r 20 -t 100000 --warmup 5000   # performance report
+cpn-cli/build/install/cpn-jvm/bin/cpn perf examples/pathology-lab/patholab.cpnd -m examples/pathology-lab/patholab-monitors.json -r 10 -t 20160 --warmup 2880 --set MEAN_GAP=30.0,40.0   # pathology lab use case, Python delay
 ```
 
 ### The app (desktop and web)

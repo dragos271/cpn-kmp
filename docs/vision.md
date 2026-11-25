@@ -52,8 +52,9 @@ One engine, written once in Kotlin Multiplatform, that:
   open in CPN Tools.
 - **RQ3, performance:** how fast is it compared to CPN Tools, to Garvik's compiled F# simulator,
   and across platforms? Measured by repeating Garvik's experiments ([performance.md](performance.md)).
-- **RQ4, use in practice:** can a domain model, a pathology lab with delays from data, give a
-  performance report useful for planning? (F13–F15)
+- **RQ4, use in practice:** do the general features (timed nets, Python functions, performance
+  reports) carry a realistic process, such as the supervisor's sketch of a pathology lab, to a
+  what-if report useful for planning? (F13–F15)
 - **Reflection:** how was AI used to build the tool, how was its work checked, and when was it
   accepted? ([ai-process.md](ai-process.md))
 
@@ -62,7 +63,8 @@ One engine, written once in Kotlin Multiplatform, that:
 1. **The tool**: more features than the earlier HVL tools and better performance
    ([comparison.md](comparison.md), [performance.md](performance.md)).
 2. **A reflection on using AI** to build it ([ai-process.md](ai-process.md)).
-3. **A real-world use case**: a pathology lab model with a performance report (F15).
+3. **A real-world use case**: the supervisor's pathology lab sketch, runnable, with a performance
+   report (F15).
 
 ## Success looks like
 

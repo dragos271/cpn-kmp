@@ -261,6 +261,7 @@ Runs alongside the iterations. The engine stays headless; the app only uses `cpn
   file is never overwritten by Save, because Save asks where to write until export, T3.1b, exists).
   *Status:* done for JSON models and the editable document format; `.cpn` waits for T3.1.
 - **A7 State-space view.** After T3.4: the standard report and an explorable state graph.
+  *Status:* the report is done (Analyse mode, T5.7); an explorable graph remains.
 - **A8 Distribution.** Desktop installers (dmg / msi / deb) and the web build published from CI (e.g. GitHub Pages).
 
 ## Supervisor feedback
@@ -273,13 +274,16 @@ Every point from the supervisor meetings (2026-11-09 and 2026-11-23) is tracked 
 - **T5.1 Repeat Garvik's performance study.** His tool and ours on the same machine
   ([performance.md](docs/performance.md)); `cpn bench`, `--set`. *Done 2026-11-23.*
 - **T5.2 Faster simulation.** Identifier text computed once; pure arc expressions and guards cached on
-  their variables' values. *Done 2026-11-25:* 1.7–3.4× faster than Garvik's compiled F#.
+  their variables' values. *Done 2026-11-25:* 1.6–4× faster than Garvik's compiled F#.
 - **T5.3 Performance reports (F14).** Monitors, replications, confidence intervals, scenario sweeps:
   `cpn perf` ([guide](docs/performance-reports.md)); random functions follow the simulation seed.
   *Done 2026-11-25* for the CLI; monitors in the app and CPN Tools' own monitors remain.
-- **T5.4 Python external functions (F13).** Needs the supervisor's choice: annotation in an SML
-  comment or an `extern` declaration.
-- **T5.5 Pathology lab model (F15).** Needs the lab's process description and timing data.
+- **T5.4 Python external functions (F13).** An annotation in an SML comment, so files still open in
+  CPN Tools ([guide](docs/python-functions.md)). *Done 2026-11-25* (JVM: CLI and desktop app).
+- **T5.5 Pathology lab use case (F15).** The supervisor's whiteboard sketch, runnable, showing F13
+  and F14 ([examples/pathology-lab](examples/pathology-lab/README.md)). *Done 2026-11-25.*
+- **T5.7 Analyse mode in the app (A7, F14).** State space with the standard report, and performance
+  studies with the same code as `cpn perf`. *Done 2026-11-25.*
 - **T5.6 Thesis template and DAT300 material.** Waiting for the student to send them.
 
 ---

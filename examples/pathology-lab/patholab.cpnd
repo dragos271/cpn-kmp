@@ -1,0 +1,446 @@
+{
+ "format": "cpn-document",
+ "version": 1,
+ "name": "PathologyLab",
+ "declarations": "(* The pathology lab from the supervisor's whiteboard sketch (2026-11-23): a use case showing\n   timed nets, a worker pool, performance reports and a delay computed by an external Python\n   function. Time is in minutes. *)\n\ncolset INT = int;\ncolset BOOL = bool;\ncolset CASE0 = record id : INT * arrived : INT;\ncolset CASE = CASE0 timed;\ncolset WORKER0 = product INT * INT;          (* worker id, skill *)\ncolset WORKER = WORKER0 timed;\ncolset JOB = product CASE0 * WORKER0 timed;  (* a case and the worker handling it *)\ncolset REVIEW = product CASE0 * BOOL timed;  (* a case after microscopy: more slides needed? *)\ncolset COUNTER = INT timed;\n\nvar c : CASE0;\nvar w, skill, n : INT;\nvar more : BOOL;\n\nval MEAN_GAP = 30.0;   (* minutes between arriving cases, on average *)\n\n(* A standard ML function, as CPN Tools has them. *)\nfun arrivalGap () = Int.max (1, round (exponential (1.0 / MEAN_GAP)));\nfun orderMore () = discrete (1, 10) = 1;   (* one case in ten needs more slides *)\n\n(* Computed by an external tool, Python (see patholab.py). CPN Tools uses this body instead. *)\n(* @python patholab.py delay_section *)\nfun delaySection (w : INT, skill : INT) : INT = 300 div skill;\n",
+ "pages": [
+  {
+   "id": "Lab",
+   "name": "Pathology lab",
+   "places": [
+    {
+     "id": "Next",
+     "name": "Next case",
+     "colset": "COUNTER",
+     "init": "1`1",
+     "x": 60,
+     "y": 40
+    },
+    {
+     "id": "Arrived",
+     "name": "Arrived",
+     "colset": "CASE",
+     "init": "",
+     "x": 200,
+     "y": 160
+    },
+    {
+     "id": "Registered",
+     "name": "Registered",
+     "colset": "CASE",
+     "init": "",
+     "x": 470,
+     "y": 170
+    },
+    {
+     "id": "AtGrossing",
+     "name": "Worker at grossing",
+     "colset": "JOB",
+     "init": "",
+     "x": 620,
+     "y": 280
+    },
+    {
+     "id": "Block",
+     "name": "Block",
+     "colset": "CASE",
+     "init": "",
+     "x": 780,
+     "y": 180
+    },
+    {
+     "id": "Processed",
+     "name": "Processed",
+     "colset": "CASE",
+     "init": "",
+     "x": 1030,
+     "y": 180
+    },
+    {
+     "id": "ToSection",
+     "name": "Embedded",
+     "colset": "CASE",
+     "init": "",
+     "x": 1030,
+     "y": 420
+    },
+    {
+     "id": "Pool",
+     "name": "Worker pool",
+     "colset": "WORKER",
+     "init": "1`(23,5) ++ 1`(42,10)",
+     "x": 620,
+     "y": 520
+    },
+    {
+     "id": "AtSectioning",
+     "name": "Workers at station",
+     "colset": "JOB",
+     "init": "",
+     "x": 870,
+     "y": 520
+    },
+    {
+     "id": "Slide",
+     "name": "Slide",
+     "colset": "CASE",
+     "init": "",
+     "x": 1030,
+     "y": 640
+    },
+    {
+     "id": "Stained",
+     "name": "Stained",
+     "colset": "CASE",
+     "init": "",
+     "x": 720,
+     "y": 660
+    },
+    {
+     "id": "Cases",
+     "name": "Cases",
+     "colset": "CASE",
+     "init": "",
+     "x": 500,
+     "y": 680
+    },
+    {
+     "id": "Reviewed",
+     "name": "Reviewed",
+     "colset": "REVIEW",
+     "init": "",
+     "x": 240,
+     "y": 560
+    },
+    {
+     "id": "Answered",
+     "name": "Final case",
+     "colset": "CASE0",
+     "init": "",
+     "x": 150,
+     "y": 800
+    }
+   ],
+   "transitions": [
+    {
+     "id": "Arrival",
+     "name": "Arrival",
+     "guard": "",
+     "x": 60,
+     "y": 160
+    },
+    {
+     "id": "Registration",
+     "name": "Registration",
+     "guard": "",
+     "x": 330,
+     "y": 170,
+     "time": "@+5"
+    },
+    {
+     "id": "AssignG",
+     "name": "Assign to grossing",
+     "guard": "",
+     "x": 470,
+     "y": 300
+    },
+    {
+     "id": "Grossing",
+     "name": "Grossing",
+     "guard": "",
+     "x": 620,
+     "y": 170,
+     "time": "@+15"
+    },
+    {
+     "id": "Processing",
+     "name": "Processing",
+     "guard": "",
+     "x": 900,
+     "y": 180,
+     "time": "@+1440"
+    },
+    {
+     "id": "Embedding",
+     "name": "Embedding",
+     "guard": "",
+     "x": 1030,
+     "y": 300,
+     "time": "@+10"
+    },
+    {
+     "id": "AssignS",
+     "name": "Assign",
+     "guard": "",
+     "x": 760,
+     "y": 520
+    },
+    {
+     "id": "Sectioning",
+     "name": "Sectioning",
+     "guard": "",
+     "x": 1030,
+     "y": 520,
+     "time": "@+delaySection (w, skill)"
+    },
+    {
+     "id": "Staining",
+     "name": "Staining",
+     "guard": "",
+     "x": 880,
+     "y": 660,
+     "time": "@+30"
+    },
+    {
+     "id": "Scanned",
+     "name": "Scanned",
+     "guard": "",
+     "x": 610,
+     "y": 670,
+     "time": "@+5"
+    },
+    {
+     "id": "Microscopy",
+     "name": "Microscopy",
+     "guard": "",
+     "x": 380,
+     "y": 680,
+     "time": "@+20"
+    },
+    {
+     "id": "Answer",
+     "name": "Answered",
+     "guard": "not more",
+     "x": 150,
+     "y": 700
+    },
+    {
+     "id": "OrderMore",
+     "name": "Order more",
+     "guard": "more",
+     "x": 620,
+     "y": 420
+    }
+   ],
+   "arcs": [
+    {
+     "id": "a1",
+     "place": "Next",
+     "transition": "Arrival",
+     "direction": "in",
+     "inscription": "n"
+    },
+    {
+     "id": "a2",
+     "place": "Next",
+     "transition": "Arrival",
+     "direction": "out",
+     "inscription": "(n + 1) @+ arrivalGap ()"
+    },
+    {
+     "id": "a3",
+     "place": "Arrived",
+     "transition": "Arrival",
+     "direction": "out",
+     "inscription": "{id = n, arrived = intTime ()}"
+    },
+    {
+     "id": "a4",
+     "place": "Arrived",
+     "transition": "Registration",
+     "direction": "in",
+     "inscription": "c"
+    },
+    {
+     "id": "a5",
+     "place": "Registered",
+     "transition": "Registration",
+     "direction": "out",
+     "inscription": "c"
+    },
+    {
+     "id": "a6",
+     "place": "Registered",
+     "transition": "AssignG",
+     "direction": "in",
+     "inscription": "c"
+    },
+    {
+     "id": "a7",
+     "place": "Pool",
+     "transition": "AssignG",
+     "direction": "in",
+     "inscription": "(w, skill)"
+    },
+    {
+     "id": "a8",
+     "place": "AtGrossing",
+     "transition": "AssignG",
+     "direction": "out",
+     "inscription": "(c, (w, skill))"
+    },
+    {
+     "id": "a9",
+     "place": "AtGrossing",
+     "transition": "Grossing",
+     "direction": "in",
+     "inscription": "(c, (w, skill))"
+    },
+    {
+     "id": "a10",
+     "place": "Block",
+     "transition": "Grossing",
+     "direction": "out",
+     "inscription": "c"
+    },
+    {
+     "id": "a11",
+     "place": "Pool",
+     "transition": "Grossing",
+     "direction": "out",
+     "inscription": "(w, skill)"
+    },
+    {
+     "id": "a12",
+     "place": "Block",
+     "transition": "Processing",
+     "direction": "in",
+     "inscription": "c"
+    },
+    {
+     "id": "a13",
+     "place": "Processed",
+     "transition": "Processing",
+     "direction": "out",
+     "inscription": "c"
+    },
+    {
+     "id": "a14",
+     "place": "Processed",
+     "transition": "Embedding",
+     "direction": "in",
+     "inscription": "c"
+    },
+    {
+     "id": "a15",
+     "place": "ToSection",
+     "transition": "Embedding",
+     "direction": "out",
+     "inscription": "c"
+    },
+    {
+     "id": "a16",
+     "place": "ToSection",
+     "transition": "AssignS",
+     "direction": "in",
+     "inscription": "c"
+    },
+    {
+     "id": "a17",
+     "place": "Pool",
+     "transition": "AssignS",
+     "direction": "in",
+     "inscription": "(w, skill)"
+    },
+    {
+     "id": "a18",
+     "place": "AtSectioning",
+     "transition": "AssignS",
+     "direction": "out",
+     "inscription": "(c, (w, skill))"
+    },
+    {
+     "id": "a19",
+     "place": "AtSectioning",
+     "transition": "Sectioning",
+     "direction": "in",
+     "inscription": "(c, (w, skill))"
+    },
+    {
+     "id": "a20",
+     "place": "Slide",
+     "transition": "Sectioning",
+     "direction": "out",
+     "inscription": "c"
+    },
+    {
+     "id": "a21",
+     "place": "Pool",
+     "transition": "Sectioning",
+     "direction": "out",
+     "inscription": "(w, skill)"
+    },
+    {
+     "id": "a22",
+     "place": "Slide",
+     "transition": "Staining",
+     "direction": "in",
+     "inscription": "c"
+    },
+    {
+     "id": "a23",
+     "place": "Stained",
+     "transition": "Staining",
+     "direction": "out",
+     "inscription": "c"
+    },
+    {
+     "id": "a24",
+     "place": "Stained",
+     "transition": "Scanned",
+     "direction": "in",
+     "inscription": "c"
+    },
+    {
+     "id": "a25",
+     "place": "Cases",
+     "transition": "Scanned",
+     "direction": "out",
+     "inscription": "c"
+    },
+    {
+     "id": "a26",
+     "place": "Cases",
+     "transition": "Microscopy",
+     "direction": "in",
+     "inscription": "c"
+    },
+    {
+     "id": "a27",
+     "place": "Reviewed",
+     "transition": "Microscopy",
+     "direction": "out",
+     "inscription": "(c, orderMore ())"
+    },
+    {
+     "id": "a28",
+     "place": "Reviewed",
+     "transition": "Answer",
+     "direction": "in",
+     "inscription": "(c, more)"
+    },
+    {
+     "id": "a29",
+     "place": "Answered",
+     "transition": "Answer",
+     "direction": "out",
+     "inscription": "c"
+    },
+    {
+     "id": "a30",
+     "place": "Reviewed",
+     "transition": "OrderMore",
+     "direction": "in",
+     "inscription": "(c, more)"
+    },
+    {
+     "id": "a31",
+     "place": "ToSection",
+     "transition": "OrderMore",
+     "direction": "out",
+     "inscription": "c"
+    }
+   ]
+  }
+ ]
+}

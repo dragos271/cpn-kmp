@@ -61,8 +61,8 @@ Cells marked **?** need the tool to be run. Gjesdal's editor is still private.
 | Headless / CLI | 🟡 via Access/CPN | ✅ | ❌ | ✅ | `cpn simulate` |
 | Timed nets | ✅ | ❌ | 🟡 `time` text field | ✅ | Integer time: availability, transition and arc delays, `time()`, clock shown in the app |
 | **Analysis** | | | | | |
-| State space | ✅ | ✅ | ❌ | ✅ | `cpn statespace`: full or partial, limits on nodes, arcs and time; timed nets too. Same sizes as CPN Tools on Garvik's 11 models |
-| Performance reports (monitors, replications, confidence intervals) | ✅ | ❌ | ❌ | ✅ | `cpn perf`, checked against queueing theory ([guide](performance-reports.md)) |
+| State space | ✅ | ✅ | ❌ | ✅ | `cpn statespace` and the app's Analyse mode: full or partial, limits on nodes, arcs and time; timed nets too. Same sizes as CPN Tools on Garvik's 11 models |
+| Performance reports (monitors, replications, confidence intervals) | ✅ | ❌ | ❌ | ✅ | `cpn perf` and the app's Analyse mode, checked against queueing theory ([guide](performance-reports.md)) |
 | Standard state-space report | ✅ | 🟡 size only | ❌ | ✅ | `cpn statespace --report`: bounds, home, liveness, fairness ([examples](reports/)) |
 | **Files** | | | | | |
 | Reads `.cpn` | ✅ | 🟡 with F# inscriptions | ❌ (future work §7.3) | ✅ | 49/49 corpus models import, 35/49 run ([results](corpus-results.md)) |
@@ -127,7 +127,7 @@ models.
 | Fusion places | ✅ | ❌ | ✅ |
 | **Errors** | | | |
 | Type errors located at the element and the text | ✅ | 🟡 the F# message, per element | ✅ |
-| **External functions in another language** | ❌ SML only (Comms/CPN for sockets) | 🟡 any .NET code, compiled in | ❌ planned: Python (F13) |
+| **External functions in another language** | ❌ SML only (Comms/CPN for sockets) | 🟡 any .NET code, compiled in | ✅ Python, with an SML fallback so the file still runs in CPN Tools ([guide](python-functions.md)) |
 
 **Summary.** Garvik's tool reads a subset of CPN Tools' colour sets and asks for inscriptions in
 F#; his thesis translates every model by hand. Ours reads CPN Tools models as they are: 49 of 49
@@ -138,7 +138,7 @@ code segments, priorities, inhibitor and reset arcs, and SML file I/O.
 ## Performance compared with Garvik
 
 See [performance.md](performance.md): his experiments repeated with both tools on the same machine.
-In short (2026-11-25): ours simulates 1.7–3.4× faster than his compiled F#, and explores state
+In short (2026-11-25): ours simulates 1.6–4× faster than his compiled F#, and explores state
 spaces up to several hundred times faster, because his exploration is quadratic. On 2026-11-23 his
 was still faster on small models; profiling and caching pure inscriptions turned that around.
 
