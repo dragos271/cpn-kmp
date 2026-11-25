@@ -19,12 +19,12 @@
 <rect x="60" y="40" width="370" height="290" fill="none" stroke="#333"/>
 <text x="245.0" y="368" text-anchor="middle">Number of steps (millions)</text>
 <text transform="translate(16 185.0) rotate(-90)" text-anchor="middle">Seconds</text>
-<polyline points="121.7,322.4 183.3,314.7 245.0,306.9 306.7,299.4 368.3,292.3" fill="none" stroke="#2a6fdb" stroke-width="2"/>
-<circle cx="121.7" cy="322.4" r="3" fill="#2a6fdb" stroke="#2a6fdb"/>
-<circle cx="183.3" cy="314.7" r="3" fill="#2a6fdb" stroke="#2a6fdb"/>
-<circle cx="245.0" cy="306.9" r="3" fill="#2a6fdb" stroke="#2a6fdb"/>
-<circle cx="306.7" cy="299.4" r="3" fill="#2a6fdb" stroke="#2a6fdb"/>
-<circle cx="368.3" cy="292.3" r="3" fill="#2a6fdb" stroke="#2a6fdb"/>
+<polyline points="121.7,322.5 183.3,315.1 245.0,307.9 306.7,300.5 368.3,292.7" fill="none" stroke="#2a6fdb" stroke-width="2"/>
+<circle cx="121.7" cy="322.5" r="3" fill="#2a6fdb" stroke="#2a6fdb"/>
+<circle cx="183.3" cy="315.1" r="3" fill="#2a6fdb" stroke="#2a6fdb"/>
+<circle cx="245.0" cy="307.9" r="3" fill="#2a6fdb" stroke="#2a6fdb"/>
+<circle cx="306.7" cy="300.5" r="3" fill="#2a6fdb" stroke="#2a6fdb"/>
+<circle cx="368.3" cy="292.7" r="3" fill="#2a6fdb" stroke="#2a6fdb"/>
 <polyline points="121.7,313.6 183.3,301.0 245.0,281.9 306.7,271.8 368.3,255.3" fill="none" stroke="#2a6fdb" stroke-width="2" stroke-dasharray="5 4"/>
 <circle cx="121.7" cy="313.6" r="3" fill="white" stroke="#2a6fdb"/>
 <circle cx="183.3" cy="301.0" r="3" fill="white" stroke="#2a6fdb"/>
@@ -35,12 +35,12 @@
 <text x="474" y="54">5 philosophers: ours</text>
 <line x1="444" x2="468" y1="68" y2="68" stroke="#2a6fdb" stroke-width="2" stroke-dasharray="5 4"/>
 <text x="474" y="72">5 philosophers: Garvik</text>
-<polyline points="121.7,317.7 183.3,305.4 245.0,293.5 306.7,281.7 368.3,270.0" fill="none" stroke="#2e9e5b" stroke-width="2"/>
-<circle cx="121.7" cy="317.7" r="3" fill="#2e9e5b" stroke="#2e9e5b"/>
-<circle cx="183.3" cy="305.4" r="3" fill="#2e9e5b" stroke="#2e9e5b"/>
-<circle cx="245.0" cy="293.5" r="3" fill="#2e9e5b" stroke="#2e9e5b"/>
-<circle cx="306.7" cy="281.7" r="3" fill="#2e9e5b" stroke="#2e9e5b"/>
-<circle cx="368.3" cy="270.0" r="3" fill="#2e9e5b" stroke="#2e9e5b"/>
+<polyline points="121.7,319.6 183.3,309.2 245.0,299.1 306.7,288.8 368.3,277.6" fill="none" stroke="#2e9e5b" stroke-width="2"/>
+<circle cx="121.7" cy="319.6" r="3" fill="#2e9e5b" stroke="#2e9e5b"/>
+<circle cx="183.3" cy="309.2" r="3" fill="#2e9e5b" stroke="#2e9e5b"/>
+<circle cx="245.0" cy="299.1" r="3" fill="#2e9e5b" stroke="#2e9e5b"/>
+<circle cx="306.7" cy="288.8" r="3" fill="#2e9e5b" stroke="#2e9e5b"/>
+<circle cx="368.3" cy="277.6" r="3" fill="#2e9e5b" stroke="#2e9e5b"/>
 <polyline points="121.7,296.2 183.3,266.3 245.0,234.2 306.7,202.7 368.3,168.9" fill="none" stroke="#2e9e5b" stroke-width="2" stroke-dasharray="5 4"/>
 <circle cx="121.7" cy="296.2" r="3" fill="white" stroke="#2e9e5b"/>
 <circle cx="183.3" cy="266.3" r="3" fill="white" stroke="#2e9e5b"/>
@@ -51,12 +51,12 @@
 <text x="474" y="96">10 philosophers: ours</text>
 <line x1="444" x2="468" y1="110" y2="110" stroke="#2e9e5b" stroke-width="2" stroke-dasharray="5 4"/>
 <text x="474" y="114">10 philosophers: Garvik</text>
-<polyline points="121.7,313.8 183.3,296.5 245.0,279.9 306.7,265.3 368.3,249.7" fill="none" stroke="#d6453d" stroke-width="2"/>
-<circle cx="121.7" cy="313.8" r="3" fill="#d6453d" stroke="#d6453d"/>
-<circle cx="183.3" cy="296.5" r="3" fill="#d6453d" stroke="#d6453d"/>
-<circle cx="245.0" cy="279.9" r="3" fill="#d6453d" stroke="#d6453d"/>
-<circle cx="306.7" cy="265.3" r="3" fill="#d6453d" stroke="#d6453d"/>
-<circle cx="368.3" cy="249.7" r="3" fill="#d6453d" stroke="#d6453d"/>
+<polyline points="121.7,316.3 183.3,302.5 245.0,289.3 306.7,275.7 368.3,261.8" fill="none" stroke="#d6453d" stroke-width="2"/>
+<circle cx="121.7" cy="316.3" r="3" fill="#d6453d" stroke="#d6453d"/>
+<circle cx="183.3" cy="302.5" r="3" fill="#d6453d" stroke="#d6453d"/>
+<circle cx="245.0" cy="289.3" r="3" fill="#d6453d" stroke="#d6453d"/>
+<circle cx="306.7" cy="275.7" r="3" fill="#d6453d" stroke="#d6453d"/>
+<circle cx="368.3" cy="261.8" r="3" fill="#d6453d" stroke="#d6453d"/>
 <polyline points="121.7,275.4 183.3,221.9 245.0,168.1 306.7,113.8 368.3,59.6" fill="none" stroke="#d6453d" stroke-width="2" stroke-dasharray="5 4"/>
 <circle cx="121.7" cy="275.4" r="3" fill="white" stroke="#d6453d"/>
 <circle cx="183.3" cy="221.9" r="3" fill="white" stroke="#d6453d"/>

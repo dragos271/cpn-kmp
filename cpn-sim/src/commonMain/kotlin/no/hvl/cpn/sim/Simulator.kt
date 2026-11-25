@@ -101,15 +101,13 @@ public class Simulator(
             candidates = candidatesNow()
         }
         if (candidates.isEmpty()) return null
-        val (_, bindings) = candidates[random.nextInt(candidates.size)]
+        // Only the chosen transition's bindings are listed; the random choices are the same as if all were.
+        val transition = candidates[random.nextInt(candidates.size)]
+        val bindings = bindingSearch.enabledBindings(transition, marking)
         return record(bindings[random.nextInt(bindings.size)])
     }
 
-    private fun candidatesNow() =
-        semantics.transitions
-            .map {
-                it to bindingSearch.enabledBindings(it, marking)
-            }.filter { it.second.isNotEmpty() }
+    private fun candidatesNow() = semantics.transitions.filter { bindingSearch.isEnabled(it, marking) }
 
     /**
      * Moves the clock to the next time something becomes enabled (CPN Tools' "increase model time"

@@ -48,13 +48,32 @@ public class BindingSearch(
         val found = LinkedHashSet<BindingElement>()
         // Places with fewer distinct tokens first: fewer branches near the root of the search.
         val patterns = plan.patterns.sortedBy { (place, _) -> marking[place].distinct.size }
-        matchPatterns(patterns, 0, Binding.EMPTY, marking) { partial ->
+        matchPatterns(patterns, 0, Binding.EMPTY, marking, now = true) { partial ->
             enumerate(plan.enumerated, 0, partial) { binding ->
                 val element = BindingElement(transition, binding)
                 if (semantics.isEnabled(element, marking)) found += element
+                false
             }
         }
         return found.toList()
+    }
+
+    /**
+     * True if [transition] has some enabled binding in [marking]. Stops at the first one, so it is
+     * much cheaper than [enabledBindings] when a transition has many: a station with 300 machine
+     * slots has 300 bindings per waiting specimen.
+     */
+    public fun isEnabled(
+        transition: Transition,
+        marking: Marking,
+    ): Boolean {
+        val plan =
+            plans[transition]
+                ?: throw IllegalArgumentException("Transition '${transition.name}' is not part of net '${semantics.net.name}'")
+        val patterns = plan.patterns.sortedBy { (place, _) -> marking[place].distinct.size }
+        return matchPatterns(patterns, 0, Binding.EMPTY, marking, now = true) { partial ->
+            enumerate(plan.enumerated, 0, partial) { binding -> semantics.isEnabled(BindingElement(transition, binding), marking) }
+        }
     }
 
     /**
@@ -67,10 +86,12 @@ public class BindingSearch(
         for (transition in semantics.transitions) {
             val plan = plans.getValue(transition)
             val patterns = plan.patterns.sortedBy { (place, _) -> marking[place].distinct.size }
-            matchPatterns(patterns, 0, Binding.EMPTY, marking) { partial ->
+            // A token whose earliest time stamp is not before the best time found so far cannot give an earlier one.
+            matchPatterns(patterns, 0, Binding.EMPTY, marking, before = { earliest }) { partial ->
                 enumerate(plan.enumerated, 0, partial) { binding ->
                     val time = semantics.enablingTime(BindingElement(transition, binding), marking)
                     if (time != null && time > marking.time && (earliest == null || time < earliest!!)) earliest = time
+                    false
                 }
             }
         }
@@ -83,36 +104,54 @@ public class BindingSearch(
 
     /** True if no transition is enabled in [marking], now or (for timed nets) at a later time. */
     public fun isDead(marking: Marking): Boolean =
-        semantics.transitions.none { enabledBindings(it, marking).isNotEmpty() } &&
+        semantics.transitions.none { isEnabled(it, marking) } &&
             (!semantics.net.isTimed || nextEnablingTime(marking) == null)
 
+    /**
+     * Calls [onMatch] for each way to match the patterns; stops, returning true, as soon as it returns
+     * true. With [now], only tokens available at the marking's time are matched: a binding that uses a
+     * token with a later time stamp cannot be enabled now. This matters for timed places that hold many
+     * tokens still in progress, such as specimens being processed overnight.
+     */
     private fun matchPatterns(
         patterns: List<Pair<Place<Any?>, PatternInscription<Any?>>>,
         index: Int,
         binding: Binding,
         marking: Marking,
-        onMatch: (Binding) -> Unit,
-    ) {
+        now: Boolean = false,
+        before: (() -> Long?)? = null,
+        onMatch: (Binding) -> Boolean,
+    ): Boolean {
         if (index == patterns.size) return onMatch(binding)
         val (place, pattern) = patterns[index]
-        for ((token, count) in marking[place].entries()) {
+        val timed = if (place.timed) marking.timed(place) else null
+        val tokens = if (now && timed != null) timed.available(marking.time) else marking[place]
+        for ((token, count) in tokens.entries()) {
             if (count < pattern.count) continue
+            if (timed != null && before != null) {
+                val bound = before()
+                // The pattern needs `count` tokens of this colour; the count-th earliest is when they all are there.
+                if (bound != null && timed.timestamps(token).sorted()[pattern.count - 1] >= bound) continue
+            }
             val extended = pattern.match(token, binding) ?: continue
-            matchPatterns(patterns, index + 1, extended, marking, onMatch)
+            if (matchPatterns(patterns, index + 1, extended, marking, now, before, onMatch)) return true
         }
+        return false
     }
 
+    /** Calls [onBinding] for each value of the enumerated variables; stops, returning true, as soon as it returns true. */
     private fun enumerate(
         variables: List<Variable<Any?>>,
         index: Int,
         binding: Binding,
-        onBinding: (Binding) -> Unit,
-    ) {
+        onBinding: (Binding) -> Boolean,
+    ): Boolean {
         if (index == variables.size) return onBinding(binding)
         val variable = variables[index]
         for (value in variable.colourSet.values!!) {
-            enumerate(variables, index + 1, binding.with(variable, value), onBinding)
+            if (enumerate(variables, index + 1, binding.with(variable, value), onBinding)) return true
         }
+        return false
     }
 
     private fun plan(transition: Transition): Plan {

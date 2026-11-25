@@ -1,0 +1,532 @@
+{
+ "date": "2026-11-25",
+ "machine": {
+  "cpu": "Apple M3",
+  "memoryGB": 8,
+  "os": "Darwin 27.2.0",
+  "java": "openjdk version \"21.0.8\" 2025-07-15 LTS"
+ },
+ "repeat": 3,
+ "simulation": [
+  {
+   "model": "Two-phase commit",
+   "size": 2,
+   "garvikSeconds": [
+    4.0,
+    8.3,
+    11.7,
+    15.5,
+    19.5
+   ],
+   "ours": [
+    {
+     "steps": 500000,
+     "medianSeconds": 1.127757,
+     "stepsPerSecond": 443357.9219636855,
+     "seconds": [
+      1.167191,
+      1.127757,
+      1.127315
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 1000000,
+     "medianSeconds": 2.24513,
+     "stepsPerSecond": 445408.50641165546,
+     "seconds": [
+      2.24513,
+      2.23509,
+      2.258234
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 1500000,
+     "medianSeconds": 3.361959,
+     "stepsPerSecond": 446168.43929387594,
+     "seconds": [
+      3.361959,
+      3.351791,
+      3.384978
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 2000000,
+     "medianSeconds": 4.466954,
+     "stepsPerSecond": 447732.3921401474,
+     "seconds": [
+      4.459867,
+      4.510672,
+      4.466954
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 2500000,
+     "medianSeconds": 5.698245,
+     "stepsPerSecond": 438731.57437070535,
+     "seconds": [
+      5.655666,
+      5.852696,
+      5.698245
+     ],
+     "stoppedEarly": false
+    }
+   ]
+  },
+  {
+   "model": "Two-phase commit",
+   "size": 3,
+   "garvikSeconds": [
+    5.3,
+    10.5,
+    15.8,
+    21.0,
+    26.3
+   ],
+   "ours": [
+    {
+     "steps": 500000,
+     "medianSeconds": 1.319344,
+     "stepsPerSecond": 378976.2184843377,
+     "seconds": [
+      1.338237,
+      1.319344,
+      1.310187
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 1000000,
+     "medianSeconds": 2.628804,
+     "stepsPerSecond": 380401.1253786893,
+     "seconds": [
+      2.628804,
+      2.618396,
+      2.640653
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 1500000,
+     "medianSeconds": 3.94271,
+     "stepsPerSecond": 380448.98052354855,
+     "seconds": [
+      3.94271,
+      3.923461,
+      3.966391
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 2000000,
+     "medianSeconds": 5.246996,
+     "stepsPerSecond": 381170.4830726,
+     "seconds": [
+      5.238056,
+      5.336392,
+      5.246996
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 2500000,
+     "medianSeconds": 6.590393,
+     "stepsPerSecond": 379340.0484614499,
+     "seconds": [
+      6.589546,
+      6.590393,
+      6.59329
+     ],
+     "stoppedEarly": false
+    }
+   ]
+  },
+  {
+   "model": "Two-phase commit",
+   "size": 4,
+   "garvikSeconds": [
+    6.7,
+    13.3,
+    19.9,
+    26.4,
+    33.1
+   ],
+   "ours": [
+    {
+     "steps": 500000,
+     "medianSeconds": 1.506343,
+     "stepsPerSecond": 331929.7132193664,
+     "seconds": [
+      1.509501,
+      1.491711,
+      1.506343
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 1000000,
+     "medianSeconds": 2.976728,
+     "stepsPerSecond": 335939.32667008875,
+     "seconds": [
+      2.966659,
+      2.996198,
+      2.976728
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 1500000,
+     "medianSeconds": 4.50104,
+     "stepsPerSecond": 333256.3140962978,
+     "seconds": [
+      4.50104,
+      4.487519,
+      4.503562
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 2000000,
+     "medianSeconds": 6.014705,
+     "stepsPerSecond": 332518.3861885163,
+     "seconds": [
+      6.0817,
+      5.994274,
+      6.014705
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 2500000,
+     "medianSeconds": 7.481047,
+     "stepsPerSecond": 334177.8229705013,
+     "seconds": [
+      7.443401,
+      7.481047,
+      7.566461
+     ],
+     "stoppedEarly": false
+    }
+   ]
+  },
+  {
+   "model": "Dining philosophers",
+   "size": 5,
+   "garvikSeconds": [
+    3.1,
+    6.1,
+    9.2,
+    12.3,
+    15.4
+   ],
+   "ours": [
+    {
+     "steps": 500000,
+     "medianSeconds": 0.771807,
+     "stepsPerSecond": 647830.351370226,
+     "seconds": [
+      0.793006,
+      0.771807,
+      0.762967
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 1000000,
+     "medianSeconds": 1.541331,
+     "stepsPerSecond": 648789.9095002955,
+     "seconds": [
+      1.541331,
+      1.537516,
+      1.542344
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 1500000,
+     "medianSeconds": 2.285046,
+     "stepsPerSecond": 656441.9272084676,
+     "seconds": [
+      2.285046,
+      2.28409,
+      2.309928
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 2000000,
+     "medianSeconds": 3.046697,
+     "stepsPerSecond": 656448.606474487,
+     "seconds": [
+      3.067393,
+      3.046697,
+      3.045341
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 2500000,
+     "medianSeconds": 3.855553,
+     "stepsPerSecond": 648415.4153762119,
+     "seconds": [
+      3.809762,
+      3.855553,
+      3.957888
+     ],
+     "stoppedEarly": false
+    }
+   ]
+  },
+  {
+   "model": "Dining philosophers",
+   "size": 10,
+   "garvikSeconds": [
+    6.2,
+    12.4,
+    18.6,
+    24.8,
+    31.3
+   ],
+   "ours": [
+    {
+     "steps": 500000,
+     "medianSeconds": 1.075715,
+     "stepsPerSecond": 464807.12828211935,
+     "seconds": [
+      1.103073,
+      1.075715,
+      1.062383
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 1000000,
+     "medianSeconds": 2.151565,
+     "stepsPerSecond": 464777.9639471733,
+     "seconds": [
+      2.161038,
+      2.140504,
+      2.151565
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 1500000,
+     "medianSeconds": 3.19719,
+     "stepsPerSecond": 469161.9828662044,
+     "seconds": [
+      3.192157,
+      3.19719,
+      3.249461
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 2000000,
+     "medianSeconds": 4.262701,
+     "stepsPerSecond": 469186.08647428005,
+     "seconds": [
+      4.331684,
+      4.262211,
+      4.262701
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 2500000,
+     "medianSeconds": 5.424239,
+     "stepsPerSecond": 460894.1457041255,
+     "seconds": [
+      5.332293,
+      5.424239,
+      5.52131
+     ],
+     "stoppedEarly": false
+    }
+   ]
+  },
+  {
+   "model": "Dining philosophers",
+   "size": 15,
+   "garvikSeconds": [
+    10.2,
+    20.4,
+    30.6,
+    40.8,
+    51.0
+   ],
+   "ours": [
+    {
+     "steps": 500000,
+     "medianSeconds": 1.412663,
+     "stepsPerSecond": 353941.4566673014,
+     "seconds": [
+      1.462624,
+      1.412663,
+      1.408346
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 1000000,
+     "medianSeconds": 2.845711,
+     "stepsPerSecond": 351406.02822985186,
+     "seconds": [
+      2.845711,
+      2.812931,
+      2.847064
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 1500000,
+     "medianSeconds": 4.208594,
+     "stepsPerSecond": 356413.5670962797,
+     "seconds": [
+      4.207845,
+      4.208594,
+      4.225488
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 2000000,
+     "medianSeconds": 5.618973,
+     "stepsPerSecond": 355936.9301116058,
+     "seconds": [
+      5.621061,
+      5.618973,
+      5.615437
+     ],
+     "stoppedEarly": false
+    },
+    {
+     "steps": 2500000,
+     "medianSeconds": 7.056211,
+     "stepsPerSecond": 354297.7952331641,
+     "seconds": [
+      7.016483,
+      7.056211,
+      7.224895
+     ],
+     "stoppedEarly": false
+    }
+   ]
+  }
+ ],
+ "stateSpace": [
+  {
+   "model": "Two-phase commit",
+   "size": "2 workers",
+   "nodes": 43,
+   "arcs": 64,
+   "matchesCpnTools": true,
+   "oursMs": 0.7,
+   "garvikMs": 31,
+   "cpnToolsSeconds": 0
+  },
+  {
+   "model": "Two-phase commit",
+   "size": "3 workers",
+   "nodes": 281,
+   "arcs": 512,
+   "matchesCpnTools": true,
+   "oursMs": 3.9,
+   "garvikMs": 38,
+   "cpnToolsSeconds": 0
+  },
+  {
+   "model": "Two-phase commit",
+   "size": "4 workers",
+   "nodes": 2323,
+   "arcs": 4774,
+   "matchesCpnTools": true,
+   "oursMs": 28.4,
+   "garvikMs": 99,
+   "cpnToolsSeconds": 0
+  },
+  {
+   "model": "Dining philosophers",
+   "size": "5",
+   "nodes": 11,
+   "arcs": 30,
+   "matchesCpnTools": true,
+   "oursMs": 0.3,
+   "garvikMs": 22,
+   "cpnToolsSeconds": 0
+  },
+  {
+   "model": "Dining philosophers",
+   "size": "10",
+   "nodes": 123,
+   "arcs": 680,
+   "matchesCpnTools": true,
+   "oursMs": 3.6,
+   "garvikMs": 28,
+   "cpnToolsSeconds": 0
+  },
+  {
+   "model": "Dining philosophers",
+   "size": "15",
+   "nodes": 1364,
+   "arcs": 11310,
+   "matchesCpnTools": true,
+   "oursMs": 30.5,
+   "garvikMs": 155,
+   "cpnToolsSeconds": 1
+  },
+  {
+   "model": "Simple protocol",
+   "size": "",
+   "nodes": 428,
+   "arcs": 1130,
+   "matchesCpnTools": true,
+   "oursMs": 8.9,
+   "garvikMs": 44,
+   "cpnToolsSeconds": 0
+  },
+  {
+   "model": "Resource allocation",
+   "size": "",
+   "nodes": 13,
+   "arcs": 20,
+   "matchesCpnTools": true,
+   "oursMs": 0.3,
+   "garvikMs": 26,
+   "cpnToolsSeconds": 0
+  },
+  {
+   "model": "Distributed database",
+   "size": "3",
+   "nodes": 28,
+   "arcs": 42,
+   "matchesCpnTools": true,
+   "oursMs": 0.6,
+   "garvikMs": 27,
+   "cpnToolsSeconds": 0
+  },
+  {
+   "model": "Distributed database",
+   "size": "6",
+   "nodes": 1459,
+   "arcs": 4872,
+   "matchesCpnTools": true,
+   "oursMs": 25.9,
+   "garvikMs": 114,
+   "cpnToolsSeconds": 1
+  },
+  {
+   "model": "Distributed database",
+   "size": "9",
+   "nodes": 59050,
+   "arcs": 314946,
+   "matchesCpnTools": true,
+   "oursMs": 934.8,
+   "garvikMs": 12685,
+   "cpnToolsSeconds": 1272
+  }
+ ]
+}

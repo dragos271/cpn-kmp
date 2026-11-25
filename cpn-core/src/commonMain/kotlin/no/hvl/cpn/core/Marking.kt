@@ -62,7 +62,8 @@ public class Marking private constructor(
     override fun equals(other: Any?): Boolean =
         this === other || (other is Marking && hash == other.hash && time == other.time && tokens == other.tokens)
 
-    private val hash: Int = tokens.hashCode() * 31 + time.hashCode()
+    // Computed on first use: a simulation makes a marking per step and never hashes most of them.
+    private val hash: Int by lazy(LazyThreadSafetyMode.NONE) { tokens.hashCode() * 31 + time.hashCode() }
 
     override fun hashCode(): Int = hash
 

@@ -118,7 +118,7 @@ public class Multiset<T> private constructor(
 
     override fun equals(other: Any?): Boolean = this === other || (other is Multiset<*> && hash == other.hash && counts == other.counts)
 
-    private val hash: Int = counts.hashCode()
+    private val hash: Int by lazy(LazyThreadSafetyMode.NONE) { counts.hashCode() }
 
     override fun hashCode(): Int = hash
 

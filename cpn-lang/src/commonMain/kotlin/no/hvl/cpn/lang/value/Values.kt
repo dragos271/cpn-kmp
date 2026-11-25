@@ -33,6 +33,13 @@ public data class MlReal(
 public data class MlTuple(
     val elements: List<Any?>,
 ) {
+    // Values are immutable and hashed often (markings, caches): compute the hash once.
+    private val hash: Int by lazy(LazyThreadSafetyMode.NONE) { elements.hashCode() }
+
+    override fun hashCode(): Int = hash
+
+    override fun equals(other: Any?): Boolean = this === other || (other is MlTuple && hash == other.hash && elements == other.elements)
+
     override fun toString(): String = elements.joinToString(",", "(", ")") { formatValue(it) }
 }
 
@@ -40,6 +47,12 @@ public data class MlTuple(
 public data class MlRecord(
     val fields: Map<String, Any?>,
 ) {
+    private val hash: Int by lazy(LazyThreadSafetyMode.NONE) { fields.hashCode() }
+
+    override fun hashCode(): Int = hash
+
+    override fun equals(other: Any?): Boolean = this === other || (other is MlRecord && hash == other.hash && fields == other.fields)
+
     public operator fun get(label: String): Any? = fields[label]
 
     override fun toString(): String = fields.entries.joinToString(",", "{", "}") { (k, v) -> "$k=${formatValue(v)}" }
@@ -54,6 +67,14 @@ public data class MlCon(
     val argument: Any? = null,
     val hasArgument: Boolean = argument != null,
 ) {
+    private val hash: Int by lazy(LazyThreadSafetyMode.NONE) { (name.hashCode() * 31 + argument.hashCode()) * 31 + hasArgument.hashCode() }
+
+    override fun hashCode(): Int = hash
+
+    override fun equals(other: Any?): Boolean =
+        this === other ||
+            (other is MlCon && hash == other.hash && name == other.name && argument == other.argument && hasArgument == other.hasArgument)
+
     override fun toString(): String = formatValue(this)
 }
 

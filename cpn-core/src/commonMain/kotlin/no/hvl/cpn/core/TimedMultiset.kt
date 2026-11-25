@@ -99,7 +99,9 @@ public class TimedMultiset<T> private constructor(
 
     override fun equals(other: Any?): Boolean = other is TimedMultiset<*> && stamps == other.stamps
 
-    override fun hashCode(): Int = stamps.hashCode()
+    private val hash: Int by lazy(LazyThreadSafetyMode.NONE) { stamps.hashCode() }
+
+    override fun hashCode(): Int = hash
 
     /** CPN Tools notation, ``1`x@5+++2`y@0``, colours in [order] and then by time; `empty` if there are no tokens. */
     public fun format(

@@ -13,12 +13,12 @@ tool and ours **on the same machine**, on the same models.
 
 | | Result on the same machine |
 |---|---|
-| Simulation | **Ours is faster on all 6 models**: 1.7–2.4× on the two-phase commit, 1.9–3.4× on the dining philosophers, and the gap grows with the size of the model. |
-| State space | **Ours is faster on every model above 13 markings**: 1.8× to over 880×, because his exploration is quadratic in the number of markings. His is faster on the two smallest models (11 and 13 markings), where both take under half a millisecond. |
+| Simulation | **Ours is faster on all 6 models**: 1.6–2.4× on the two-phase commit, 1.9–4.0× on the dining philosophers, and the gap grows with the size of the model. |
+| State space | **Ours is faster on every model above 13 markings**: 2× to over 900×, because his exploration is quadratic in the number of markings. His is faster on the two smallest models (11 and 13 markings), where both take under half a millisecond. |
 | Correctness | Both tools give the same node and arc counts as CPN Tools on every model they finish. |
 | Features | His tool needs the model rewritten in F# and recompiled for every change of size; ours runs the CPN Tools files as they are ([comparison.md](comparison.md)). |
 
-So the claim for the thesis is: **an interpreter for the original CPN ML that simulates 1.7–3.4×
+So the claim for the thesis is: **an interpreter for the original CPN ML that simulates 1.6–4×
 faster than Garvik's compiled F#, and explores state spaces up to hundreds of times faster.**
 
 How we got there is part of the result ([below](#how-we-got-here)): the first same-machine
@@ -51,17 +51,17 @@ described in the JSON file.
 
 ## Simulation: time for N random steps
 
-Seconds, his vs ours, same machine (his measured 2026-11-23, ours 2026-11-25 after the changes
-[below](#how-we-got-here)). In brackets: how many times faster ours is.
+Seconds, his vs ours, same machine (his measured 2026-11-23, ours 2026-11-25 after all the
+changes [below](#how-we-got-here)). In brackets: how many times faster ours is.
 
 | Model | Size | 0.5M steps | 1M | 1.5M | 2M | 2.5M |
 |---|---|---|---|---|---|---|
-| Two-phase commit | 2 workers | 2.0 vs 1.0 (1.9×) | 3.9 vs 2.0 (1.9×) | 5.7 vs 3.4 (1.7×) | 7.5 vs 4.3 (1.8×) | 9.4 vs 5.2 (1.8×) |
-| Two-phase commit | 3 workers | 2.8 vs 1.5 (1.8×) | 5.3 vs 3.1 (1.7×) | 8.0 vs 4.6 (1.7×) | 10.7 vs 6.1 (1.7×) | 14.0 vs 7.7 (1.8×) |
-| Two-phase commit | 4 workers | 3.6 vs 1.5 (2.4×) | 7.2 vs 3.0 (2.4×) | 10.7 vs 4.6 (2.3×) | 14.3 vs 6.1 (2.3×) | 17.7 vs 7.7 (2.3×) |
-| Dining philosophers | 5 | 1.7 vs 0.8 (2.2×) | 3.0 vs 1.6 (1.9×) | 5.0 vs 2.4 (2.1×) | 6.0 vs 3.2 (1.9×) | 7.7 vs 3.9 (2.0×) |
-| Dining philosophers | 10 | 3.5 vs 1.3 (2.8×) | 6.6 vs 2.5 (2.6×) | 9.9 vs 3.8 (2.6×) | 13.2 vs 5.0 (2.6×) | 16.7 vs 6.2 (2.7×) |
-| Dining philosophers | 15 | 5.6 vs 1.7 (3.4×) | 11.2 vs 3.5 (3.2×) | 16.7 vs 5.2 (3.2×) | 22.4 vs 6.7 (3.3×) | 28.0 vs 8.3 (3.4×) |
+| Two-phase commit | 2 workers | 2.0 vs 1.1 (1.7×) | 3.9 vs 2.2 (1.7×) | 5.7 vs 3.4 (1.7×) | 7.5 vs 4.5 (1.7×) | 9.4 vs 5.7 (1.6×) |
+| Two-phase commit | 3 workers | 2.8 vs 1.3 (2.1×) | 5.3 vs 2.6 (2.0×) | 8.0 vs 3.9 (2.0×) | 10.7 vs 5.2 (2.0×) | 14.0 vs 6.6 (2.1×) |
+| Two-phase commit | 4 workers | 3.6 vs 1.5 (2.4×) | 7.2 vs 3.0 (2.4×) | 10.7 vs 4.5 (2.4×) | 14.3 vs 6.0 (2.4×) | 17.7 vs 7.5 (2.4×) |
+| Dining philosophers | 5 | 1.7 vs 0.8 (2.2×) | 3.0 vs 1.5 (1.9×) | 5.0 vs 2.3 (2.2×) | 6.0 vs 3.0 (2.0×) | 7.7 vs 3.9 (2.0×) |
+| Dining philosophers | 10 | 3.5 vs 1.1 (3.2×) | 6.6 vs 2.2 (3.1×) | 9.9 vs 3.2 (3.1×) | 13.2 vs 4.3 (3.1×) | 16.7 vs 5.4 (3.1×) |
+| Dining philosophers | 15 | 5.6 vs 1.4 (4.0×) | 11.2 vs 2.8 (3.9×) | 16.7 vs 4.2 (4.0×) | 22.4 vs 5.6 (4.0×) | 28.0 vs 7.1 (4.0×) |
 
 ![Two-phase commit](figures/simulation-two-phase-commit.svg)
 
@@ -71,9 +71,9 @@ Solid lines are ours, dashed lines his tool on the same machine.
 
 - Both tools are linear in the number of steps; neither slows down over long runs.
 - Ours is faster on every model, and more so as the model grows: from 2 to 4 workers his time
-  grows by 89 %, ours by 48 %; from 5 to 15 philosophers his grows 3.6×, ours 2.1×.
-- Runs of the same measurement differ by less than 8 % for both tools, except a few short runs
-  (up to 26 %); the raw time of every run is in the JSON files.
+  grows by 89 %, ours by 31 %; from 5 to 15 philosophers his grows 3.6×, ours 1.8×.
+- Runs of the same measurement differ by less than 4 % for ours, and less than 8 % for his except
+  a few of his shortest runs (up to 24 %); the raw time of every run is in the JSON files.
 
 **Compared with his thesis.** His tool runs about twice as fast here as in his Figures 6.2 and 6.4
 (9.4 s instead of 19.5 s for 2.5M steps with 2 workers): the M3 and .NET 8 are both faster than
@@ -83,17 +83,17 @@ the M1 Max and .NET 6 he used. Only same-machine numbers are compared above.
 
 | Model | Size | Nodes | Arcs | Same as CPN Tools | His (ms) | Ours (ms) | His / ours | His thesis (ms) | CPN Tools (s) |
 |---|---|---|---|---|---|---|---|---|---|
-| Two-phase commit | 2 workers | 43 | 64 | yes | 5.3 | 0.90 | 5.8 | 31.0 | 0 |
-| Two-phase commit | 3 workers | 281 | 512 | yes | 136 | 4.7 | 29 | 38.0 | 0 |
-| Two-phase commit | 4 workers | 2 323 | 4 774 | yes | 14 475 | 24.7 | 586 | 99.0 | 0 |
+| Two-phase commit | 2 workers | 43 | 64 | yes | 5.3 | 0.70 | 7.5 | 31.0 | 0 |
+| Two-phase commit | 3 workers | 281 | 512 | yes | 136 | 3.9 | 35 | 38.0 | 0 |
+| Two-phase commit | 4 workers | 2 323 | 4 774 | yes | 14 475 | 28.4 | 510 | 99.0 | 0 |
 | Dining philosophers | 5 | 11 | 30 | yes | 0.18 | 0.30 | 0.6 | 22.0 | 0 |
-| Dining philosophers | 10 | 123 | 680 | yes | 29.2 | 3.3 | 8.8 | 28.0 | 0 |
-| Dining philosophers | 15 | 1 364 | 11 310 | yes | 5 152 | 29.9 | 172 | 155 | 1 |
-| Simple protocol |  | 428 | 1 130 | yes | 275 | 9.3 | 30 | 44.0 | 0 |
+| Dining philosophers | 10 | 123 | 680 | yes | 29.2 | 3.6 | 8.1 | 28.0 | 0 |
+| Dining philosophers | 15 | 1 364 | 11 310 | yes | 5 152 | 30.5 | 169 | 155 | 1 |
+| Simple protocol |  | 428 | 1 130 | yes | 275 | 8.9 | 31 | 44.0 | 0 |
 | Resource allocation |  | 13 | 20 | yes | 0.19 | 0.30 | 0.6 | 26.0 | 0 |
-| Distributed database | 3 | 28 | 42 | yes | 1.2 | 0.70 | 1.8 | 27.0 | 0 |
-| Distributed database | 6 | 1 459 | 4 872 | yes | 8 309 | 26.8 | 310 | 114 | 1 |
-| Distributed database | 9 | 59 050 | 314 946 | yes | not finished in 15 min | 1 019 | > 880 | 12 685 | 1272 |
+| Distributed database | 3 | 28 | 42 | yes | 1.2 | 0.60 | 2.1 | 27.0 | 0 |
+| Distributed database | 6 | 1 459 | 4 872 | yes | 8 309 | 25.9 | 321 | 114 | 1 |
+| Distributed database | 9 | 59 050 | 314 946 | yes | not finished in 15 min | 935 | > 963 | 12 685 | 1272 |
 
 "Same as CPN Tools" compares with Garvik's Appendix B. "CPN Tools (s)" is the time in that
 appendix, which CPN Tools reports in whole seconds; it was measured on Garvik's machine. Both tools
@@ -119,6 +119,7 @@ store every marking and arc; neither time includes a report.
 | 2026-11-23 | First measurement | 11.4 s | 2.9 s |
 | 2026-11-23 | Identifier text computed once, not on every lookup | 6.9 s | 2.4 s |
 | 2026-11-25 | Pure arc expressions and guards cached on the values of their variables | 1.7 s | 1.0 s |
+| 2026-11-25 | Bindings listed only for the chosen transition; hashes of markings and values computed once, on first use | 1.4 s | 1.1 s |
 | | *Garvik's tool, same machine* | *5.6 s* | *2.0 s* |
 
 1. **Identifier text.** A profile (Java Flight Recorder) showed 40 % of the time spent looking up
@@ -133,10 +134,15 @@ store every marking and arc; neither time includes a report.
    evaluated every time, so the behaviour cannot change; the cross-platform golden-trace tests and
    all 35 runnable corpus models give the same results as before.
 
-What is left in the profile is the engine's own bookkeeping (hash maps for bindings and markings),
-spread thinly. The next step, if needed, is to recompute only the transitions next to the one that
-fired, as CPN Tools does; it matters for models with many transitions, such as the pathology lab
-(F15).
+3. **Larger models.** A first, larger pathology lab model (F15, since replaced by the supervisor's sketch), with 20 transitions and up to 300 machine
+   slots, ran at 6 500 steps/s. Three changes, all keeping the results identical, gave 27 500:
+   each step now lists the bindings of the chosen transition only (CPN Tools does the same: it
+   checks whether each transition is enabled at all, then picks one); the search skips tokens
+   whose time stamp is still in the future; and the hashes of markings and colours are computed
+   once, when first needed, instead of for every new marking.
+
+What is left is the engine's own bookkeeping, spread thinly. The next step, if needed, is to
+recheck only the transitions next to the one that fired, as CPN Tools does.
 
 ## Threats to validity
 
