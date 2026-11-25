@@ -128,7 +128,9 @@ public class Interpreter(
     /** The model time CPN ML's `time()` returns; the simulator sets it before evaluating (T3.2). */
     public var now: Long = 0,
 ) {
-    private var global: Env = Env(Library.values(this), null)
+    private val library: Map<String, Any?> = Library.values(this)
+
+    private var global: Env = Env(library, null)
 
     /** The environment colour set declarations are evaluated in (the global one while [declare] runs). */
     private var colourSetScope: Env = global
@@ -193,6 +195,14 @@ public class Interpreter(
 
     /** Whether [name] is bound to anything in the global environment. */
     public fun isBound(name: String): Boolean = global.lookup(name) !== Env.UNBOUND
+
+    /**
+     * True if [expr] gives the same value whenever its CPN variables have the same values: it uses no
+     * random function, no model time, no references and no output, also inside the functions it calls.
+     * Such expressions can be cached on the values of their variables. Conservative: anything it cannot
+     * see into counts as impure.
+     */
+    public fun isPure(expr: Expr): Boolean = Purity().expression(expr)
 
     /** The declared CPN variables [expr] uses, i.e. those occurring free in it. */
     public fun variablesOf(expr: Expr): Set<String> = LinkedHashSet<String>().also { FreeVariables(this, it).expression(expr, emptySet()) }
@@ -440,6 +450,68 @@ public class Interpreter(
         }
     }
 
+    /** Walks an expression and the user functions it calls (see [isPure]). */
+    private inner class Purity {
+        private val checked = ArrayList<Any>()
+
+        fun expression(e: Expr): Boolean =
+            when (e) {
+                is ConstExpr, is SelectorExpr -> true
+                is IdentExpr -> name(e.name)
+                is TupleExpr -> e.elements.all(::expression)
+                is RecordExpr -> e.fields.all { expression(it.value) }
+                is ListExpr -> e.elements.all(::expression)
+                is AppExpr -> expression(e.function) && expression(e.argument)
+                is InfixExpr -> name(e.operator) && expression(e.left) && expression(e.right)
+                is TypedExpr -> expression(e.expr)
+                is AndAlsoExpr -> expression(e.left) && expression(e.right)
+                is OrElseExpr -> expression(e.left) && expression(e.right)
+                is IfExpr -> expression(e.condition) && expression(e.then) && expression(e.otherwise)
+                is CaseExpr -> expression(e.scrutinee) && e.rules.all { expression(it.body) }
+                is FnExpr -> e.rules.all { expression(it.body) }
+                is LetExpr -> e.declarations.all(::declaration) && expression(e.body)
+                is SeqExpr -> e.exprs.all(::expression)
+                is RaiseExpr -> expression(e.exception)
+                is HandleExpr -> expression(e.expr) && e.rules.all { expression(it.body) }
+                is WhileExpr -> false // only useful with references
+            }
+
+        private fun declaration(d: Decl): Boolean =
+            when (d) {
+                is ValDecl -> d.bindings.all { expression(it.value) }
+                is FunDecl -> d.bindings.all { bind -> bind.clauses.all { expression(it.body) } }
+                is LocalDecl -> (d.locals + d.body).all(::declaration)
+                else -> true
+            }
+
+        /** A name is pure unless it is one of the impure library functions or a function that uses one. */
+        private fun name(name: LongIdent): Boolean {
+            if (name.name in IMPURE) return false
+            val value = global.lookup(name.text)
+            return when {
+                value === Env.UNBOUND -> true // a local name, or a colour set function (`ran` is excluded above)
+                name.qualifiers.isEmpty() && value === library[name.name] -> true
+                name.qualifiers.isNotEmpty() && value === library[name.text] -> true
+                value is FunClosure -> once(value.bind) { value.bind.clauses.all { expression(it.body) } }
+                value is Closure -> once(value.rules) { value.rules.all { expression(it.body) } }
+                value is Constructor -> true // `ref` is excluded above
+                value is MlRef -> false
+                value is MlFunction -> false // a function we cannot look into
+                else -> true // a value or an exception
+            }
+        }
+
+        /** Checks [node] once; a recursive call to it is pure if the rest of the body is. */
+        private fun once(
+            node: Any,
+            check: () -> Boolean,
+        ): Boolean {
+            if (checked.any { it === node }) return true
+            checked += node
+            return check()
+        }
+    }
+
     // ---------------------------------------------------------------------------------------------
     // Patterns
 
@@ -611,3 +683,23 @@ public class Interpreter(
             else -> emptyMap()
         }
 }
+
+/** Library functions whose result is not determined by their arguments (see [Interpreter.isPure]). */
+private val IMPURE =
+    setOf(
+        "!",
+        ":=",
+        "ref",
+        "print",
+        "time",
+        "intTime",
+        "@+",
+        "random",
+        "ran",
+        "discrete",
+        "uniform",
+        "normal",
+        "exponential",
+        "bernoulli",
+        "poisson",
+    )

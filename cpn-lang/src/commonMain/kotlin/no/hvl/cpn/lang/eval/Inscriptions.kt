@@ -94,7 +94,11 @@ public class CpnMlInscriptions(
                     ).map { this@CpnMlInscriptions.variables.getValue(it) }
                     .toSet()
 
-            override fun evaluate(binding: Binding): Boolean =
+            private val cache = if (interpreter.isPure(expr)) ResultCache<Boolean>(variables) else null
+
+            override fun evaluate(binding: Binding): Boolean = cache?.get(binding) { compute(binding) } ?: compute(binding)
+
+            private fun compute(binding: Binding): Boolean =
                 when (val value = interpreter.evaluate(expr, values(variables, binding), source)) {
                     is Boolean -> value
                     else -> (value as List<*>).all { it as Boolean }
@@ -134,6 +138,26 @@ public class CpnMlInscriptions(
             override fun toString(): String = "@+" + (source?.text ?: expr.toString())
         }
 
+    /** For [no.hvl.cpn.core.Net.seed]: random functions in inscriptions draw from a generator with this seed. */
+    public fun setSeed(seed: Long) {
+        interpreter.random = RandomSource.seeded(seed)
+    }
+
+    /**
+     * [expr] as a function of a binding and the model time, e.g. a monitor's observation
+     * `intTime() - arrived` (F14). Its variables must be bound in the bindings it is given.
+     */
+    public fun value(
+        expr: Expr,
+        source: SourceText? = null,
+    ): (Binding, Long) -> Any? {
+        val used = interpreter.variablesOf(expr).map { variables.getValue(it) }.toSet()
+        return { binding, time ->
+            setTime(time)
+            interpreter.evaluate(expr, values(used, binding), source)
+        }
+    }
+
     /** For [no.hvl.cpn.core.Net.clock]: the model time `time()` returns. */
     public fun setTime(time: Long) {
         interpreter.now = time
@@ -145,7 +169,12 @@ public class CpnMlInscriptions(
         val colourSet: CpnColourSet,
         val source: SourceText?,
     ) : ArcInscription<Any?> {
-        override fun evaluate(binding: Binding): Multiset<Any?> =
+        // Timed tokens are not cached: their time stamps depend on the model time.
+        private val cache = if (interpreter.isPure(expr)) ResultCache<Multiset<Any?>>(variables) else null
+
+        override fun evaluate(binding: Binding): Multiset<Any?> = cache?.get(binding) { compute(binding) } ?: compute(binding)
+
+        private fun compute(binding: Binding): Multiset<Any?> =
             tokens(interpreter.evaluate(expr, values(variables, binding), source), colourSet)
 
         override fun evaluateTimed(binding: Binding): TimedMultiset<Any?> =
@@ -363,5 +392,43 @@ public fun conform(
                 value
             }
         else -> value
+    }
+}
+
+/**
+ * Results of a pure inscription (see [Interpreter.isPure]) by the values of its variables. A
+ * simulation evaluates the same arc and guard with the same values over and over, as in the dining
+ * philosophers, where `Chopsticks(p)` has one result per philosopher. Bounded, so a model with many
+ * different bindings stops caching instead of filling memory.
+ */
+private class ResultCache<R : Any>(
+    variables: Set<Variable<*>>,
+) {
+    private val order = variables.toTypedArray()
+    private val results = HashMap<Any?, R>()
+
+    fun get(
+        binding: Binding,
+        compute: () -> R,
+    ): R {
+        val key =
+            when (order.size) {
+                0 -> Unit
+                1 -> if (binding.isBound(order[0])) binding[order[0]] else return compute()
+                else -> {
+                    val values = ArrayList<Any?>(order.size)
+                    for (variable in order) {
+                        if (!binding.isBound(variable)) return compute()
+                        values += binding[variable]
+                    }
+                    values
+                }
+            }
+        results[key]?.let { return it }
+        return compute().also { if (results.size < MAX_CACHED) results[key] = it }
+    }
+
+    private companion object {
+        const val MAX_CACHED = 100_000
     }
 }

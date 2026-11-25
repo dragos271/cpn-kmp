@@ -8,6 +8,7 @@ import no.hvl.cpn.lang.value.formatValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 /*
@@ -56,6 +57,50 @@ class InscriptionsTest {
         assertEquals("1`1++1`2", onElements.evaluate(Binding.of(workers to listOf(1, 2))).format(element = ::formatValue))
         assertTrue(inscriptions.arc(expr, ws) is PatternInscription<*>, "on a place of lists it binds from a token")
         assertTrue(inscriptions.arc(parser.parseExpression(SourceText("a", "w")), w) is PatternInscription<*>)
+    }
+
+    @Test
+    fun pureExpressionsAreRecognised() {
+        val interpreter =
+            inscriptions(
+                """
+                val n = 5;
+                colset PH = index ph with 1..n; colset CS = index cs with 1..n; colset DIE = int with 1..6;
+                var p : PH; var d : DIE;
+                fun Chopsticks(ph(i)) = 1`cs(i) ++ 1`cs(if i=n then 1 else i+1);
+                fun fact 0 = 1 | fact k = k * fact (k - 1);
+                fun roll () = discrete(1, 6);
+                fun later () = roll () + 1;
+                globref counter = 0;
+                """.trimIndent(),
+            ).interpreter
+
+        fun pure(text: String) = interpreter.isPure(parser.parseExpression(SourceText("e", text)))
+        assertTrue(pure("Chopsticks(p)"), "constructors, arithmetic and user functions")
+        assertTrue(pure("fact 5 + d"), "a recursive function")
+        assertTrue(pure("let val x = d + 1 in case x of 2 => 1`p | _ => empty end"))
+        assertTrue(pure("List.map (fn x => x + 1) [d]"))
+        assertFalse(pure("discrete(1, 6)"), "random")
+        assertFalse(pure("later ()"), "random, two calls down")
+        assertFalse(pure("DIE.ran ()"), "a colour set's random colour")
+        assertFalse(pure("time ()"), "model time")
+        assertFalse(pure("!counter"), "a reference")
+        assertFalse(pure("ref 1"), "a new reference each time")
+    }
+
+    @Test
+    fun pureArcsAreCachedAndRandomOnesAreNot() {
+        val inscriptions = inscriptions("colset DIE = int with 1..6; var d : DIE;")
+        val die = inscriptions.interpreter.colourSets["DIE"]!!
+        val d = inscriptions.variables.getValue("d")
+        val pure = inscriptions.arc(parser.parseExpression(SourceText("a", "1`(d + 0)")), die)
+        val binding = Binding.of(d to 3)
+        assertSame(pure.evaluate(binding), pure.evaluate(binding), "the second evaluation comes from the cache")
+        assertEquals("1`4", pure.evaluate(Binding.of(d to 4)).format(element = ::formatValue), "one result per value of d")
+
+        val random = inscriptions.arc(parser.parseExpression(SourceText("a", "1`(discrete(1, 6) + d - d)")), die)
+        val results = (1..50).map { random.evaluate(binding).format(element = ::formatValue) }.toSet()
+        assertTrue(results.size > 1, "a random arc is evaluated every time: $results")
     }
 
     @Test
