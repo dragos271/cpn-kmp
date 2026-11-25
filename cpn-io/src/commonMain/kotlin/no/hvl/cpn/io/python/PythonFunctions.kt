@@ -15,6 +15,8 @@ import kotlinx.serialization.json.put
 import no.hvl.cpn.lang.eval.ExternalFunction
 import no.hvl.cpn.lang.eval.ExternalFunctionException
 import no.hvl.cpn.lang.eval.ExternalFunctions
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * `(* @python lab_delays.py delay_section *)` before `fun delaySection ...`: the CPN ML function
@@ -142,7 +144,16 @@ public class PythonFunctions(
         private fun shared(
             launcher: ProcessLauncher,
             python: String,
-        ): LineChannel = processes.getOrPut(python) { launcher.start(listOf(python, "-u", "-c", BRIDGE), null) }
+        ): LineChannel = processes.getOrPut(python) { launcher.start(listOf(python, "-u", "-c", BOOTSTRAP), null) }
+
+        /**
+         * Runs [BRIDGE] from base64, so the command line has no quotes or spaces: Windows passes
+         * arguments as one string, and the script's own double quotes would not survive it.
+         */
+        @OptIn(ExperimentalEncodingApi::class)
+        private val BOOTSTRAP: String by lazy {
+            "exec(__import__('base64').b64decode('${Base64.encode(BRIDGE.encodeToByteArray())}'))"
+        }
 
         /** Stops the shared Python processes (they also stop when the program exits). */
         public fun shutdown() {
