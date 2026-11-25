@@ -96,6 +96,38 @@ class PerformanceTest {
     }
 
     @Test
+    fun availableOnlyCountsTokensWhoseTimeHasCome() {
+        // The server goes straight back to its place with a time stamp 6 later, as a worker pool
+        // often does: it is on the place all the time, but available only 4 of every 10 time units.
+        val base = queue("10", "6")
+        val page = base.pages.single()
+        val delayedReturn =
+            base.copy(
+                pages =
+                    listOf(
+                        page.copy(
+                            arcs =
+                                page.arcs.filter { it.id != "a8" } +
+                                    arc("a9", "Server", "Start", TRANSITION_TO_PLACE, "() @+ 6"),
+                        ),
+                    ),
+            )
+        val net = assertNotNull(delayedReturn.compile().net)
+        val run =
+            Performance.run(
+                net,
+                listOf(
+                    Monitor.MarkingSize("On the place", listOf("Server")),
+                    Monitor.MarkingSize("Idle", listOf("Server"), availableOnly = true),
+                ),
+                RunLimits(untilTime = 1000),
+                seed = 1,
+            )
+        assertEquals(1.0, run.monitors[0].mean, 1e-9)
+        assertEquals(0.4, run.monitors[1].mean, 1e-9)
+    }
+
+    @Test
     fun theWarmUpIsNotMeasured() {
         // From time 500 on: 50 departures in 500 time units, the same averages as without warm-up.
         val model = queue("10", "6").compile()

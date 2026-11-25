@@ -9,6 +9,8 @@ kotlin {
             api(project(":cpn-io"))
             api(project(":cpn-sim"))
             api(project(":cpn-statespace"))
+            // Monitor files of performance studies are JSON.
+            implementation(libs.kotlinx.serialization.json)
         }
     }
 }

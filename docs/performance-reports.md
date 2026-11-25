@@ -50,16 +50,17 @@ A JSON file with a list of monitors:
   "monitors": [
     { "name": "Customers in system", "type": "marking-size", "places": ["Queue", "Busy"] },
     { "name": "Throughput", "type": "occurrences", "transition": "Depart" },
-    { "name": "Time in system", "type": "observe", "transition": "Depart", "expression": "intTime() - c" }
+    { "name": "Time in system", "type": "observe", "transition": "Depart", "expression": "intTime() - c" },
+    { "name": "Time in system, early customers", "type": "observe", "transition": "Depart", "expression": "intTime() - c", "when": "c < 5000" }
   ]
 }
 ```
 
 | Type | Measures | Value per run |
 |---|---|---|
-| `marking-size` | Tokens on one or more places together: a queue, the busy workers | Mean over time (min and max in the JSON output) |
+| `marking-size` | Tokens on one or more places together: a queue, the busy workers. With `"available": true`, only tokens whose time stamp has passed, e.g. idle workers in a pool they return to with a delay | Mean over time (min and max in the JSON output) |
 | `occurrences` | How often a transition occurs | Rate per time unit (per step if untimed); the count is in the JSON output |
-| `observe` | A CPN ML expression evaluated at each occurrence of a transition, with that occurrence's binding and the model time, e.g. how long the token being removed waited | Mean of the observations |
+| `observe` | A CPN ML expression evaluated at each occurrence of a transition, with that occurrence's binding and the model time, e.g. how long the token being removed waited. With `"when"`, only occurrences where a CPN ML condition holds | Mean of the observations |
 
 Places and transitions are named as in the standard report (`Page'Name 1`); `Page'Name` or just
 `Name` work when they are unambiguous. Without `--monitors`, every place's size and every
@@ -71,7 +72,7 @@ transition's rate are measured.
 combination:
 
 ```bash
-cpn perf lab.cpn --monitors lab-monitors.json --set WORKERS=2,3,4 --until-time 50000 -r 30
+cpn perf patholab.cpnd --monitors patholab-monitors.json --set MEAN_GAP=30.0,40.0 --until-time 20160 -r 30
 ```
 
 Each scenario gets its own table, so the effect of a change can be read off directly, with its

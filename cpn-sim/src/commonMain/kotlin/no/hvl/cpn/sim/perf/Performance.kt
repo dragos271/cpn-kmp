@@ -25,6 +25,12 @@ public sealed class Monitor(
     public class MarkingSize(
         name: String,
         public val places: List<String>,
+        /**
+         * Count only tokens available now: in a timed net, a resource put back with a delay, such
+         * as a worker returned `@+30`, is busy until its time stamp. The mean then counts each token
+         * from its time stamp on, e.g. the number of idle workers.
+         */
+        public val availableOnly: Boolean = false,
     ) : Monitor(name)
 
     /** How often [transition] occurs: the count, and the rate per time unit (or per step in an untimed net). */
@@ -40,6 +46,8 @@ public sealed class Monitor(
     public class Observe(
         name: String,
         public val transition: String,
+        /** Only occurrences for which this holds are observed, e.g. only biopsies; null for all. */
+        public val condition: ((Binding, Long) -> Boolean)? = null,
         public val value: (Binding, Long) -> Double,
     ) : Monitor(name)
 }
@@ -173,9 +181,11 @@ public object Performance {
         limits: RunLimits,
         replications: Int,
         seed: Long = 1,
+        /** Called after each run with the number of runs done, e.g. for progress; it may throw to cancel. */
+        onRun: (Int) -> Unit = {},
     ): PerformanceReport {
         require(replications > 0) { "replications must be positive" }
-        val runs = (0 until replications).map { run(net, monitors, limits, seed + it) }
+        val runs = (0 until replications).map { run(net, monitors, limits, seed + it).also { _ -> onRun(it + 1) } }
         val summaries =
             monitors.indices.map { i ->
                 val means = runs.map { it.monitors[i].mean }
@@ -247,13 +257,15 @@ public object Performance {
         transitions: List<Transition>,
     ): Collector =
         when (monitor) {
-            is Monitor.MarkingSize -> SizeCollector(monitor.name, monitor.places.map { find(it, places, "place") { p -> p.name } })
+            is Monitor.MarkingSize ->
+                SizeCollector(monitor.name, monitor.places.map { find(it, places, "place") { p -> p.name } }, monitor.availableOnly)
             is Monitor.Occurrences -> CountCollector(monitor.name, find(monitor.transition, transitions, "transition") { it.name })
             is Monitor.Observe ->
                 ObserveCollector(
                     monitor.name,
                     find(monitor.transition, transitions, "transition") { it.name },
                     monitor.value,
+                    monitor.condition,
                 )
         }
 
@@ -306,13 +318,43 @@ private abstract class Collector(
 private class SizeCollector(
     name: String,
     val places: List<Place<*>>,
+    val availableOnly: Boolean,
 ) : Collector(name) {
     private var area = 0.0
     private var seen = 0L
     private var min = Double.POSITIVE_INFINITY
     private var max = Double.NEGATIVE_INFINITY
 
-    private fun size(marking: no.hvl.cpn.core.Marking): Int = places.sumOf { marking[it].size }
+    /** Tokens on the places; with [availableOnly], only those available at [time]. */
+    private fun size(
+        marking: no.hvl.cpn.core.Marking,
+        time: Long = marking.time,
+    ): Int =
+        if (availableOnly) {
+            places.sumOf { if (it.timed) marking.timed(it).available(time).size else marking[it].size }
+        } else {
+            places.sumOf { marking[it].size }
+        }
+
+    /** Token-time on the places from [start] to [end]: each token counts from its time stamp on, with [availableOnly]. */
+    private fun area(
+        marking: no.hvl.cpn.core.Marking,
+        start: Long,
+        end: Long,
+    ): Double {
+        if (!availableOnly) return size(marking).toDouble() * (end - start)
+        var total = 0.0
+        for (place in places) {
+            if (!place.timed) {
+                total += marking[place].size.toDouble() * (end - start)
+                continue
+            }
+            for ((_, stamp, count) in marking.timed(place).entries()) {
+                if (stamp < end) total += count.toDouble() * (end - max(start, stamp))
+            }
+        }
+        return total
+    }
 
     private fun see(value: Int) {
         seen++
@@ -335,9 +377,8 @@ private class SizeCollector(
     ) {
         val start = max(from, warmup)
         if (to > start) {
-            val size = size(marking)
-            area += size.toDouble() * (to - start)
-            if (from < warmup) see(size) // the marking at the end of the warm-up
+            area += area(marking, start, to)
+            if (from < warmup) see(size(marking, start)) // the marking at the end of the warm-up
         }
     }
 
@@ -381,6 +422,7 @@ private class ObserveCollector(
     name: String,
     val transition: Transition,
     val value: (Binding, Long) -> Double,
+    val condition: ((Binding, Long) -> Boolean)?,
 ) : Collector(name) {
     private var count = 0L
     private var sum = 0.0
@@ -396,6 +438,7 @@ private class ObserveCollector(
         warmup: Long,
     ) {
         if (transition !== this.transition || time < warmup) return
+        if (condition != null && !condition(binding, time)) return
         val v = value(binding, time)
         count++
         sum += v

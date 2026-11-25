@@ -10,6 +10,8 @@ import no.hvl.cpn.core.Page
 import no.hvl.cpn.core.Place
 import no.hvl.cpn.core.Substitution
 import no.hvl.cpn.core.Transition
+import no.hvl.cpn.io.python.PythonFunctions
+import no.hvl.cpn.io.python.platformLauncher
 import no.hvl.cpn.lang.ast.Expr
 import no.hvl.cpn.lang.ast.SourceText
 import no.hvl.cpn.lang.colour.AliasColourSet
@@ -27,6 +29,10 @@ public class CompiledModel(
     public val net: Net?,
     public val problems: List<Problem>,
     private val expressions: ((String) -> (Binding, Long) -> Any?)? = null,
+    /** The model's Python functions (F13), if it has `@python` annotations and Python can run here. */
+    public val python: PythonFunctions? = null,
+    /** Things to tell the user that do not stop the model from running. */
+    public val notes: List<String> = emptyList(),
 ) {
     /**
      * Compiles [text], a CPN ML expression over the model's declarations and variables, into a
@@ -48,15 +54,19 @@ public class CompiledModel(
  *
  * Random functions in inscriptions draw from [random].
  */
-public fun CpnDocument.compile(random: RandomSource = RandomSource.seeded(0)): CompiledModel {
+public fun CpnDocument.compile(
+    random: RandomSource = RandomSource.seeded(0),
+    /** The folder of the model file: Python files of `@python` annotations are looked up there (F13). */
+    directory: String? = null,
+): CompiledModel {
     val problems = check()
     if (problems.isNotEmpty()) return CompiledModel(null, problems)
     return try {
-        val compiler = DocumentCompiler(this, random)
+        val compiler = DocumentCompiler(this, random, directory)
         val net = compiler.compile()
         val structural = net.validate()
         if (structural.isEmpty()) {
-            CompiledModel(net, emptyList(), compiler::expression)
+            CompiledModel(net, emptyList(), compiler::expression, compiler.python, compiler.notes)
         } else {
             CompiledModel(
                 null,
@@ -98,14 +108,26 @@ private class CompileProblem(
 private class DocumentCompiler(
     private val document: CpnDocument,
     random: RandomSource,
+    private val directory: String?,
 ) {
     private val parser = CpnMlParser()
     private val interpreter = Interpreter(random)
+    var python: PythonFunctions? = null
+    val notes = mutableListOf<String>()
     private lateinit var inscriptions: CpnMlInscriptions
     private val pages = LinkedHashMap<String, Page>()
     private val building = mutableSetOf<String>()
 
     fun compile(): Net {
+        val bindings = PythonFunctions.annotations(document.declarations)
+        if (bindings.isNotEmpty()) {
+            val launcher = platformLauncher()
+            if (launcher == null) {
+                notes += "Python functions (${bindings.joinToString { it.name }}) cannot run on this platform: their CPN ML bodies are used"
+            } else {
+                python = PythonFunctions(bindings, directory, launcher).also { interpreter.externals = it }
+            }
+        }
         val source = SourceText("declarations", document.declarations)
         attempt(null, ProblemField.DECLARATIONS) { interpreter.declare(parser.parseDeclarations(source), source) }
         inscriptions = CpnMlInscriptions(interpreter)
@@ -116,8 +138,10 @@ private class DocumentCompiler(
             document.pages.map { pages.getValue(it.id) },
             inscriptions.variables.values.toList(),
             inscriptions::setTime,
-            inscriptions::setSeed,
-        )
+        ) { seed ->
+            inscriptions.setSeed(seed)
+            python?.seed(seed)
+        }
     }
 
     fun expression(text: String): (Binding, Long) -> Any? {

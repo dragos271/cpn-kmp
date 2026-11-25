@@ -34,7 +34,7 @@ class ConvertCommand(
             }
         val result =
             try {
-                val model = ModelFiles.open(bytes, ModelFiles.modelName(file))
+                val model = ModelFiles.open(bytes, ModelFiles.modelName(file), ModelFiles.directoryOf(file))
                 when (to) {
                     "cpn" -> ModelFiles.exportCpn(model, model.document)
                     else -> CpnDocumentFormat.write(model.document).encodeToByteArray()

@@ -1,6 +1,8 @@
 package no.hvl.cpn.cli
 
 import com.github.ajalt.clikt.core.CliktError
+import no.hvl.cpn.api.perf.ModelValues
+import no.hvl.cpn.api.perf.StudyException
 
 /**
  * `--set NAME=VALUE`: replaces the value of a `val NAME = ...;` declaration before the model is
@@ -18,13 +20,12 @@ internal fun setValues(
     if (values.isEmpty()) return bytes
     var text = CharArray(bytes.size) { (bytes[it].toInt() and 0xff).toChar() }.concatToString()
     for ((name, value) in values) {
-        // In a JSON document a line break is the two characters `\n`, so `val` may follow an `n`.
-        val declaration = Regex("""(?:(?<=\\[nrt])|(?<![\w']))val\s+${Regex.escape(name)}\s*=\s*[^;]*;""")
-        // A .cpn file may keep a declaration twice, as text and in its <layout>: both are replaced.
-        if (!declaration.containsMatchIn(text)) {
-            throw CliktError("$file: --set $name: the model has no 'val $name = ...;' declaration", statusCode = 1)
-        }
-        text = declaration.replace(text, Regex.escapeReplacement("val $name = $value;"))
+        text =
+            try {
+                ModelValues.set(text, name, value)
+            } catch (e: StudyException) {
+                throw CliktError("$file: --set $name: ${e.message}", statusCode = 1)
+            }
     }
     return ByteArray(text.length) {
         val c = text[it].code
@@ -34,11 +35,21 @@ internal fun setValues(
 }
 
 /** Parses `NAME=VALUE`. */
-internal fun parseSet(option: String): Pair<String, String> {
-    val name = option.substringBefore('=', "").trim()
-    val value = option.substringAfter('=', "").trim()
-    if (name.isEmpty() || value.isEmpty() || !name.all { it.isLetterOrDigit() || it == '_' || it == '\'' }) {
-        throw CliktError("--set expects NAME=VALUE, for example --set W=3; got '$option'", statusCode = 1)
+internal fun parseSet(option: String): Pair<String, String> =
+    try {
+        ModelValues.parseAssignment(option)
+    } catch (e: StudyException) {
+        throw CliktError("--set: ${e.message}", statusCode = 1)
     }
-    return name to value
+
+/** Checks a model's Python functions (F13) before it runs, so a missing file or function is reported up front. */
+internal fun checkPython(
+    python: no.hvl.cpn.io.python.PythonFunctions?,
+    file: String,
+) {
+    try {
+        python?.check()
+    } catch (e: no.hvl.cpn.lang.eval.ExternalFunctionException) {
+        throw CliktError("$file: ${e.message}", statusCode = 1)
+    }
 }

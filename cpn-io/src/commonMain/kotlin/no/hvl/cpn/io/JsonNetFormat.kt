@@ -74,6 +74,10 @@ public data class LoadedModel(
     val notes: List<String> = emptyList(),
     /** The parsed `.cpn` file it came from, if any: exporting keeps what the document does not hold (T3.1b). */
     val cpnSource: no.hvl.cpn.io.xml.XmlDocument? = null,
+    /** The model's Python functions (F13), if it has any and Python can run here. */
+    val python: no.hvl.cpn.io.python.PythonFunctions? = null,
+    /** The folder the model was opened from, where its Python files are (F13); null if unknown. */
+    val directory: String? = null,
 )
 
 private class ColourSetSpec(

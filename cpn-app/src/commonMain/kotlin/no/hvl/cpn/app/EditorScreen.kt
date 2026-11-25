@@ -134,6 +134,8 @@ fun EditorScreen(
     var selection by remember { mutableStateOf<String?>(null) }
     // Runnable models open ready to simulate; models that cannot run yet open for editing.
     var mode by remember(model) { mutableStateOf(if (model.net != null) CanvasMode.SIMULATE else CanvasMode.EDIT) }
+    // Analyse mode shows the state space and performance studies instead of the canvas.
+    var analysing by remember(model) { mutableStateOf(false) }
     var tool by remember { mutableStateOf<Tool?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     val viewports = remember(model) { mutableStateMapOf<String, Viewport>() }
@@ -150,7 +152,7 @@ fun EditorScreen(
             ) {
                 CompiledModel(model.net, document.check())
             } else {
-                document.compile()
+                document.compile(directory = model.directory)
             }
         }
     val problems = compiled.problems
@@ -249,7 +251,7 @@ fun EditorScreen(
         scope.launch {
             val file = files.open() ?: return@launch
             try {
-                val opened = ModelFiles.open(file.text, ModelFiles.modelName(file.name))
+                val opened = ModelFiles.open(file.text, ModelFiles.modelName(file.name), ModelFiles.directoryOf(file.name))
                 // Saving writes the document format, so a .cpn file is never overwritten: Save asks
                 // where to save instead (until .cpn export, T3.1b).
                 onOpen(opened, if (CpnToolsFormat.recognises(file.text)) null else file.name)
@@ -387,12 +389,19 @@ fun EditorScreen(
                 onSaveAs = { save(asNewFile = true) },
                 onExport = ::exportCpn,
                 mode = mode,
+                analysing = analysing,
+                onAnalyse = {
+                    analysing = true
+                    tool = null
+                    message = null
+                },
                 viewport = viewport,
                 canUndo = history.canUndo,
                 canRedo = history.canRedo,
                 canDelete = mode == CanvasMode.EDIT && selection != null,
                 onMode = {
                     mode = it
+                    analysing = false
                     tool = null
                     message = null
                     focusCanvas()
@@ -409,109 +418,121 @@ fun EditorScreen(
                 onDelete = ::deleteSelection,
             )
             HorizontalDivider()
-            Row(Modifier.weight(1f).fillMaxWidth()) {
-                Palette(
-                    selected = tool,
-                    onArm = { armed ->
-                        tool = if (tool == armed) null else armed
-                        message = null
-                        mode = CanvasMode.EDIT
-                        focusCanvas()
-                    },
-                    onDragStart = { dragged, at -> paletteDrag = dragged to at },
-                    onDrag = { at -> paletteDrag = paletteDrag?.let { (t, _) -> t to at } },
-                    onDrop = {
-                        paletteDrag?.let { (dropped, at) ->
-                            if (canvasBounds.contains(at)) add(dropped, snap(viewport.toWorld(at - canvasBounds.topLeft)))
-                        }
-                        paletteDrag = null
-                        focusCanvas()
-                    },
-                    modifier = Modifier.width(92.dp).fillMaxHeight(),
-                )
-                VerticalDivider()
-                Box(
-                    Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .onGloballyPositioned { canvasBounds = it.boundsInRoot() }
-                        .focusRequester(canvasFocus)
-                        .onFocusChanged { canvasFocused = it.isFocused }
-                        .focusable()
-                        .pointerInput(Unit) {
-                            // Clicking the canvas gives it keyboard focus (for Delete) without taking the click.
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val event = awaitPointerEvent(PointerEventPass.Initial)
-                                    if (event.type == PointerEventType.Press) canvasFocus.requestFocus()
-                                }
-                            }
-                        },
-                ) {
-                    NetCanvas(
-                        page = page,
-                        pageNames = document.pages.associate { it.id to it.name },
-                        mode = mode,
-                        tool = tool,
-                        selection = selection,
-                        overlay = if (mode == CanvasMode.SIMULATE) snapshot?.overlay(page.id) else null,
-                        problems = if (mode == CanvasMode.EDIT) problemIds else emptySet(),
-                        viewport = viewport,
-                        colors = canvasColors(),
-                        onSelect = {
-                            selection = it
-                            message = null
-                        },
-                        onMove = { id, position ->
-                            history.edit("move:$id") { doc -> doc.withPage(doc.page(currentPageId())!!.moved(id, position)) }
-                        },
-                        onMoveEnd = { history.breakCoalescing() },
-                        onFire = { id -> act { session?.fireTransition(currentPageId(), id) } },
-                        onPlace = ::add,
-                        onConnect = ::connect,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                    if (mode == CanvasMode.SIMULATE) {
-                        cannotRun?.let { Notice(it, Modifier.align(Alignment.TopCenter).padding(10.dp)) }
-                    }
-                    (message ?: notice)?.let { text ->
-                        Toast(text, isError = message != null, Modifier.align(Alignment.BottomEnd).padding(10.dp))
-                    }
-                    CanvasHint(mode, tool, Modifier.align(Alignment.BottomStart).padding(10.dp))
-                }
-                VerticalDivider()
-                PropertiesPanel(
+            if (analysing) {
+                AnalysisPanel(
                     document = document,
-                    page = page,
-                    selection = selection,
+                    net = compiled.net,
+                    problem = cannotRun,
+                    directory = model.directory,
+                    files = files,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                )
+            }
+            if (!analysing) {
+                Row(Modifier.weight(1f).fillMaxWidth()) {
+                    Palette(
+                        selected = tool,
+                        onArm = { armed ->
+                            tool = if (tool == armed) null else armed
+                            message = null
+                            mode = CanvasMode.EDIT
+                            focusCanvas()
+                        },
+                        onDragStart = { dragged, at -> paletteDrag = dragged to at },
+                        onDrag = { at -> paletteDrag = paletteDrag?.let { (t, _) -> t to at } },
+                        onDrop = {
+                            paletteDrag?.let { (dropped, at) ->
+                                if (canvasBounds.contains(at)) add(dropped, snap(viewport.toWorld(at - canvasBounds.topLeft)))
+                            }
+                            paletteDrag = null
+                            focusCanvas()
+                        },
+                        modifier = Modifier.width(92.dp).fillMaxHeight(),
+                    )
+                    VerticalDivider()
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .onGloballyPositioned { canvasBounds = it.boundsInRoot() }
+                            .focusRequester(canvasFocus)
+                            .onFocusChanged { canvasFocused = it.isFocused }
+                            .focusable()
+                            .pointerInput(Unit) {
+                                // Clicking the canvas gives it keyboard focus (for Delete) without taking the click.
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                                        if (event.type == PointerEventType.Press) canvasFocus.requestFocus()
+                                    }
+                                }
+                            },
+                    ) {
+                        NetCanvas(
+                            page = page,
+                            pageNames = document.pages.associate { it.id to it.name },
+                            mode = mode,
+                            tool = tool,
+                            selection = selection,
+                            overlay = if (mode == CanvasMode.SIMULATE) snapshot?.overlay(page.id) else null,
+                            problems = if (mode == CanvasMode.EDIT) problemIds else emptySet(),
+                            viewport = viewport,
+                            colors = canvasColors(),
+                            onSelect = {
+                                selection = it
+                                message = null
+                            },
+                            onMove = { id, position ->
+                                history.edit("move:$id") { doc -> doc.withPage(doc.page(currentPageId())!!.moved(id, position)) }
+                            },
+                            onMoveEnd = { history.breakCoalescing() },
+                            onFire = { id -> act { session?.fireTransition(currentPageId(), id) } },
+                            onPlace = ::add,
+                            onConnect = ::connect,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        if (mode == CanvasMode.SIMULATE) {
+                            cannotRun?.let { Notice(it, Modifier.align(Alignment.TopCenter).padding(10.dp)) }
+                        }
+                        (message ?: notice)?.let { text ->
+                            Toast(text, isError = message != null, Modifier.align(Alignment.BottomEnd).padding(10.dp))
+                        }
+                        CanvasHint(mode, tool, Modifier.align(Alignment.BottomStart).padding(10.dp))
+                    }
+                    VerticalDivider()
+                    PropertiesPanel(
+                        document = document,
+                        page = page,
+                        selection = selection,
+                        mode = mode,
+                        problems = problems,
+                        snapshot = snapshot,
+                        session = session,
+                        act = ::act,
+                        edit = { key, change -> history.edit(key, change) },
+                        onDelete = ::deleteSelection,
+                        onOpenPage = {
+                            pageId = it
+                            selection = null
+                        },
+                        modifier = Modifier.width(320.dp).fillMaxHeight(),
+                    )
+                }
+                HorizontalDivider()
+                BottomBar(
+                    document = document,
+                    pageId = page.id,
                     mode = mode,
-                    problems = problems,
-                    snapshot = snapshot,
                     session = session,
-                    act = ::act,
-                    edit = { key, change -> history.edit(key, change) },
-                    onDelete = ::deleteSelection,
-                    onOpenPage = {
+                    snapshot = snapshot,
+                    problemCount = problems.size,
+                    onPage = {
                         pageId = it
                         selection = null
                     },
-                    modifier = Modifier.width(320.dp).fillMaxHeight(),
+                    act = ::act,
                 )
             }
-            HorizontalDivider()
-            BottomBar(
-                document = document,
-                pageId = page.id,
-                mode = mode,
-                session = session,
-                snapshot = snapshot,
-                problemCount = problems.size,
-                onPage = {
-                    pageId = it
-                    selection = null
-                },
-                act = ::act,
-            )
         }
         paletteDrag?.let { (dragged, at) -> DragGhost(dragged, at) }
         confirmDiscard?.let { action ->
@@ -581,6 +602,8 @@ private fun TopBar(
     onSaveAs: () -> Unit,
     onExport: () -> Unit,
     mode: CanvasMode,
+    analysing: Boolean,
+    onAnalyse: () -> Unit,
     viewport: Viewport,
     canUndo: Boolean,
     canRedo: Boolean,
@@ -621,8 +644,9 @@ private fun TopBar(
             )
         }
         Spacer(Modifier.width(8.dp))
-        ModeButton("Edit", mode == CanvasMode.EDIT) { onMode(CanvasMode.EDIT) }
-        ModeButton("Simulate", mode == CanvasMode.SIMULATE) { onMode(CanvasMode.SIMULATE) }
+        ModeButton("Edit", !analysing && mode == CanvasMode.EDIT) { onMode(CanvasMode.EDIT) }
+        ModeButton("Simulate", !analysing && mode == CanvasMode.SIMULATE) { onMode(CanvasMode.SIMULATE) }
+        ModeButton("Analyse", analysing, onAnalyse)
     }
 }
 

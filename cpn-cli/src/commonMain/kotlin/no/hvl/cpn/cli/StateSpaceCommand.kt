@@ -62,13 +62,14 @@ class StateSpaceCommand(
             }
         val stateSpace =
             try {
-                val model = ModelFiles.open(bytes, ModelFiles.modelName(file))
+                val model = ModelFiles.open(bytes, ModelFiles.modelName(file), ModelFiles.directoryOf(file))
                 for (note in model.notes) echo("note: $note", err = true)
+                checkPython(model.python, file)
                 val net =
                     model.net ?: throw CliktError(
                         "$file: the model cannot run:\n" +
                             model.document
-                                .compile()
+                                .compile(directory = ModelFiles.directoryOf(file))
                                 .problems
                                 .joinToString("\n") { "  ${it.elementId ?: "declarations"}: ${it.message}" },
                         statusCode = 1,

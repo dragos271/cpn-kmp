@@ -181,12 +181,13 @@ class BenchCommand(
             } catch (e: Exception) {
                 throw CliktError("Cannot read '$file': ${e.message}", statusCode = 1)
             }
-        val model = errors { ModelFiles.open(bytes, ModelFiles.modelName(file)) }
+        val model = errors { ModelFiles.open(bytes, ModelFiles.modelName(file), ModelFiles.directoryOf(file)) }
         for (note in model.notes) echo("note: $note", err = true)
+        checkPython(model.python, file)
         return model.net ?: throw CliktError(
             "$file: the model cannot run:\n" +
                 model.document
-                    .compile()
+                    .compile(directory = ModelFiles.directoryOf(file))
                     .problems
                     .joinToString("\n") { "  ${it.elementId ?: "declarations"}: ${it.message}" },
             statusCode = 1,

@@ -63,14 +63,19 @@ public object ModelFiles {
     public fun open(
         text: String,
         name: String = "Untitled",
+        /** The file's folder: Python functions of the model are looked up there (F13). */
+        directory: String? = null,
     ): LoadedModel {
         if (CpnToolsFormat.recognises(text)) {
             val imported = CpnToolsFormat.read(text, name)
+            val compiled = imported.document.compile(directory = directory)
             return LoadedModel(
-                net = imported.document.compile().net,
+                net = compiled.net,
                 document = imported.document,
-                notes = imported.notes,
+                notes = imported.notes + compiled.notes,
                 cpnSource = imported.source,
+                python = compiled.python,
+                directory = directory,
             )
         }
         val root =
@@ -82,7 +87,14 @@ public object ModelFiles {
         if (root is JsonObject && (root["format"] as? JsonPrimitive)?.content == CpnDocumentFormat.FORMAT) {
             // Editable documents run once compiled; with problems, they open for editing only.
             val document = CpnDocumentFormat.read(text)
-            return LoadedModel(net = document.compile().net, document = document)
+            val compiled = document.compile(directory = directory)
+            return LoadedModel(
+                net = compiled.net,
+                document = document,
+                notes = compiled.notes,
+                python = compiled.python,
+                directory = directory,
+            )
         }
         return JsonNetFormat.load(text)
     }
@@ -91,7 +103,14 @@ public object ModelFiles {
     public fun open(
         bytes: ByteArray,
         name: String = "Untitled",
-    ): LoadedModel = open(Xml.decode(bytes), name)
+        directory: String? = null,
+    ): LoadedModel = open(Xml.decode(bytes), name, directory)
+
+    /** The folder of [path], for [open]'s `directory`; null for a bare file name (the current folder). */
+    public fun directoryOf(path: String): String? {
+        val cut = maxOf(path.lastIndexOf('/'), path.lastIndexOf('\\'))
+        return if (cut <= 0) (if (cut == 0) "/" else null) else path.substring(0, cut)
+    }
 
     /**
      * [document] as a CPN Tools `.cpn` file, as bytes ready to write (T3.1b). If [model] was opened

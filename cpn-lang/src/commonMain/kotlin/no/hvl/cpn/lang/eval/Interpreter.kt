@@ -127,6 +127,8 @@ public class Interpreter(
     public var random: RandomSource = RandomSource.seeded(0),
     /** The model time CPN ML's `time()` returns; the simulator sets it before evaluating (T3.2). */
     public var now: Long = 0,
+    /** Functions implemented outside CPN ML, e.g. in Python (F13); consulted when a `fun` is declared. */
+    public var externals: ExternalFunctions? = null,
 ) {
     private val library: Map<String, Any?> = Library.values(this)
 
@@ -450,6 +452,60 @@ public class Interpreter(
         }
     }
 
+    /**
+     * A `fun` implemented outside CPN ML (F13). Collects its curried arguments, calls [external] with
+     * them as foreign values, and converts the result to the declared result type, which is required.
+     * Never cached: it counts as impure ([isPure]).
+     */
+    private inner class ExternalClosure(
+        val bind: FunBind,
+        val external: ExternalFunction,
+        val arguments: List<Any?> = emptyList(),
+        /** The declarations' source text, where [bind] is located (errors happen while an arc is evaluated). */
+        val origin: SourceText? = source,
+    ) : MlFunction {
+        private val signature = externalSignature(bind)
+
+        override fun apply(argument: Any?): Any? {
+            val all = arguments + listOf(argument)
+            if (all.size < signature.first) return ExternalClosure(bind, external, all, origin)
+            val name = bind.name.name
+            val type =
+                signature.second
+                    ?: throw EvaluationException(
+                        bind.span,
+                        "external function $name needs a result type: fun $name (...) : int = ...",
+                        origin,
+                    )
+            return try {
+                fromForeign(external.call(foreignArguments(all)), type, colourSets)
+            } catch (e: ExternalFunctionException) {
+                throw EvaluationException(bind.span, "external function $name: ${e.message}", origin)
+            }
+        }
+    }
+
+    /**
+     * The arguments as the external function receives them: `fun f (a, b)` passes `a` and `b`,
+     * `fun f ()` passes nothing, and curried arguments pass one each.
+     */
+    private fun ExternalClosure.foreignArguments(values: List<Any?>): List<Any?> {
+        val pattern =
+            bind.clauses
+                .first()
+                .arguments
+                .singleOrNull()
+                ?.let { if (it is TypedPat) it.pattern else it }
+        val single = values.singleOrNull()
+        return when {
+            values.size != 1 -> values.map(::toForeign)
+            pattern is TuplePat && pattern.elements.isEmpty() -> emptyList()
+            pattern is TuplePat && single is MlTuple -> single.elements.map(::toForeign)
+            single == Unit -> emptyList()
+            else -> listOf(toForeign(single))
+        }
+    }
+
     /** Walks an expression and the user functions it calls (see [isPure]). */
     private inner class Purity {
         private val checked = ArrayList<Any>()
@@ -596,7 +652,10 @@ public class Interpreter(
             is FunDecl -> {
                 val frame = HashMap<String, Any?>()
                 val inner = Env(frame, env) // filled below, so the functions see themselves
-                for (bind in decl.bindings) frame[bind.name.name] = FunClosure(bind, inner)
+                for (bind in decl.bindings) {
+                    val external = externals?.lookup(bind.name.name)
+                    frame[bind.name.name] = if (external != null) ExternalClosure(bind, external) else FunClosure(bind, inner)
+                }
                 inner
             }
             is TypeDecl, is FixityDecl -> env
