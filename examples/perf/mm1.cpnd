@@ -1,0 +1,127 @@
+{
+ "format": "cpn-document",
+ "version": 1,
+ "name": "MM1",
+ "declarations": "(* An M/M/1 queue: customers arrive at random (on average every 100 time units) and are\n   served one at a time (on average 50 time units). Known answers: the server is busy half the\n   time, on average 1 customer is in the system, and a customer spends 100 time units in it. *)\ncolset UNIT = unit timed;\ncolset CUST = int timed; (* a customer: the time it arrived *)\nvar c : CUST;\nval lambda = 0.01; (* arrivals per time unit *)\nval mu = 0.02;     (* services per time unit *)\nfun delay rate = round (exponential rate);\n",
+ "pages": [
+  {
+   "id": "MM1",
+   "name": "Queue",
+   "places": [
+    {
+     "id": "Gen",
+     "name": "Next Arrival",
+     "colset": "UNIT",
+     "init": "1`()",
+     "x": 0,
+     "y": 0
+    },
+    {
+     "id": "Queue",
+     "name": "Queue",
+     "colset": "CUST",
+     "init": "",
+     "x": 240,
+     "y": 0
+    },
+    {
+     "id": "Server",
+     "name": "Server Idle",
+     "colset": "UNIT",
+     "init": "1`()",
+     "x": 360,
+     "y": -120
+    },
+    {
+     "id": "Busy",
+     "name": "Busy",
+     "colset": "CUST",
+     "init": "",
+     "x": 480,
+     "y": 0
+    }
+   ],
+   "transitions": [
+    {
+     "id": "Arrive",
+     "name": "Arrive",
+     "guard": "",
+     "x": 120,
+     "y": 0
+    },
+    {
+     "id": "Start",
+     "name": "Start Service",
+     "guard": "",
+     "x": 360,
+     "y": 0
+    },
+    {
+     "id": "Depart",
+     "name": "Depart",
+     "guard": "",
+     "x": 600,
+     "y": 0
+    }
+   ],
+   "arcs": [
+    {
+     "id": "a1",
+     "place": "Gen",
+     "transition": "Arrive",
+     "direction": "in",
+     "inscription": "()"
+    },
+    {
+     "id": "a2",
+     "place": "Gen",
+     "transition": "Arrive",
+     "direction": "out",
+     "inscription": "() @+ delay lambda"
+    },
+    {
+     "id": "a3",
+     "place": "Queue",
+     "transition": "Arrive",
+     "direction": "out",
+     "inscription": "intTime()"
+    },
+    {
+     "id": "a4",
+     "place": "Queue",
+     "transition": "Start",
+     "direction": "in",
+     "inscription": "c"
+    },
+    {
+     "id": "a5",
+     "place": "Server",
+     "transition": "Start",
+     "direction": "in",
+     "inscription": "()"
+    },
+    {
+     "id": "a6",
+     "place": "Busy",
+     "transition": "Start",
+     "direction": "out",
+     "inscription": "c @+ delay mu"
+    },
+    {
+     "id": "a7",
+     "place": "Busy",
+     "transition": "Depart",
+     "direction": "in",
+     "inscription": "c"
+    },
+    {
+     "id": "a8",
+     "place": "Server",
+     "transition": "Depart",
+     "direction": "out",
+     "inscription": "()"
+    }
+   ]
+  }
+ ]
+}

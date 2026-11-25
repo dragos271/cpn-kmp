@@ -1,6 +1,7 @@
 package no.hvl.cpn.io.model
 
 import no.hvl.cpn.core.Arc
+import no.hvl.cpn.core.Binding
 import no.hvl.cpn.core.Delay
 import no.hvl.cpn.core.Guard
 import no.hvl.cpn.core.Multiset
@@ -25,7 +26,19 @@ import no.hvl.cpn.lang.parse.CpnMlParser
 public class CompiledModel(
     public val net: Net?,
     public val problems: List<Problem>,
-)
+    private val expressions: ((String) -> (Binding, Long) -> Any?)? = null,
+) {
+    /**
+     * Compiles [text], a CPN ML expression over the model's declarations and variables, into a
+     * function of a binding and the model time, evaluated by the same interpreter as [net]; for
+     * monitors (F14).
+     *
+     * @throws IllegalStateException if the model did not compile.
+     * @throws no.hvl.cpn.lang.parse.ParseException if [text] does not parse.
+     */
+    public fun expression(text: String): (Binding, Long) -> Any? =
+        checkNotNull(expressions) { "the model did not compile: ${problems.joinToString { it.message }}" }(text)
+}
 
 /**
  * Compiles the document into an executable [Net] (T2.5): checks it ([check]), runs its declarations
@@ -39,10 +52,11 @@ public fun CpnDocument.compile(random: RandomSource = RandomSource.seeded(0)): C
     val problems = check()
     if (problems.isNotEmpty()) return CompiledModel(null, problems)
     return try {
-        val net = DocumentCompiler(this, random).compile()
+        val compiler = DocumentCompiler(this, random)
+        val net = compiler.compile()
         val structural = net.validate()
         if (structural.isEmpty()) {
-            CompiledModel(net, emptyList())
+            CompiledModel(net, emptyList(), compiler::expression)
         } else {
             CompiledModel(
                 null,
@@ -102,7 +116,13 @@ private class DocumentCompiler(
             document.pages.map { pages.getValue(it.id) },
             inscriptions.variables.values.toList(),
             inscriptions::setTime,
+            inscriptions::setSeed,
         )
+    }
+
+    fun expression(text: String): (Binding, Long) -> Any? {
+        val source = SourceText("monitor", text)
+        return inscriptions.value(parser.parseExpression(source), source)
     }
 
     private fun page(

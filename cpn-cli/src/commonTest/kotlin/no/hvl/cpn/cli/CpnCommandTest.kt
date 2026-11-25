@@ -77,9 +77,49 @@ class CpnCommandTest {
             "countdown.cpnd" to document,
             "divide.cpnd" to document.replace("fun dec n = n - 1;", "fun dec n = n div 0;"),
             "broken.json" to """{"name": "X", "pages": []}""",
+            "queue.cpnd" to
+                """
+                {
+                  "format": "cpn-document", "version": 1, "name": "Queue",
+                  "declarations": "colset UNIT = unit timed; colset CUST = int timed; var c : CUST;\nval SERVICE = 6;",
+                  "pages": [{
+                    "id": "Q", "name": "Q",
+                    "places": [
+                      { "id": "Gen", "name": "Gen", "colset": "UNIT", "init": "1`()", "x": 0, "y": 0 },
+                      { "id": "Waiting", "name": "Waiting", "colset": "CUST", "init": "", "x": 100, "y": 0 },
+                      { "id": "Idle", "name": "Idle", "colset": "UNIT", "init": "1`()", "x": 200, "y": -100 },
+                      { "id": "Busy", "name": "Busy", "colset": "CUST", "init": "", "x": 300, "y": 0 }
+                    ],
+                    "transitions": [
+                      { "id": "Arrive", "name": "Arrive", "guard": "", "x": 50, "y": 0 },
+                      { "id": "Start", "name": "Start", "guard": "", "x": 200, "y": 0 },
+                      { "id": "Depart", "name": "Depart", "guard": "", "x": 400, "y": 0 }
+                    ],
+                    "arcs": [
+                      { "id": "a1", "place": "Gen", "transition": "Arrive", "direction": "in", "inscription": "()" },
+                      { "id": "a2", "place": "Gen", "transition": "Arrive", "direction": "out", "inscription": "() @+ 10" },
+                      { "id": "a3", "place": "Waiting", "transition": "Arrive", "direction": "out", "inscription": "intTime()" },
+                      { "id": "a4", "place": "Waiting", "transition": "Start", "direction": "in", "inscription": "c" },
+                      { "id": "a5", "place": "Idle", "transition": "Start", "direction": "in", "inscription": "()" },
+                      { "id": "a6", "place": "Busy", "transition": "Start", "direction": "out", "inscription": "c @+ SERVICE" },
+                      { "id": "a7", "place": "Busy", "transition": "Depart", "direction": "in", "inscription": "c" },
+                      { "id": "a8", "place": "Idle", "transition": "Depart", "direction": "out", "inscription": "()" }
+                    ]
+                  }]
+                }
+                """.trimIndent(),
+            "queue-monitors.json" to
+                """
+                { "monitors": [
+                  { "name": "Utilisation", "type": "marking-size", "places": ["Busy"] },
+                  { "name": "Departures", "type": "occurrences", "transition": "Depart" },
+                  { "name": "W", "type": "observe", "transition": "Depart", "expression": "intTime() - c" }
+                ] }
+                """.trimIndent(),
+            "bad-monitors.json" to """{ "monitors": [ { "name": "x", "type": "histogram" } ] }""",
             "start.cpnd" to
                 document
-                    .replace("colset N = int with 0..3;", "val START = 3; colset N = int with 0..9;")
+                    .replace("colset N = int with 0..3;", "colset N = int with 0..9;\\nval START = 3;")
                     .replace("\"init\": \"1`3\"", "\"init\": \"1`START\""),
         )
 
@@ -288,6 +328,44 @@ class CpnCommandTest {
         assertEquals("true", runs[1].jsonObject["stoppedEarly"]!!.jsonPrimitive.content, "the countdown is dead after 3 steps")
         assertEquals(4, json["stateSpace"]!!.jsonObject["nodes"]!!.jsonPrimitive.int)
         assertTrue("steps:" in cpn().test("bench start.cpnd --steps 2 --repeat 1 --warmup 0").stdout)
+    }
+
+    @Test
+    fun perfReportsMonitorsPerScenario() {
+        // Arrivals every 10, service SERVICE: utilisation SERVICE / 10, time in system SERVICE, rate 0.1.
+        val result = cpn().test("perf queue.cpnd -m queue-monitors.json -r 2 -t 1000 --set SERVICE=4,6 --format json")
+        assertEquals(0, result.statusCode, result.stderr)
+        val scenarios = Json.parseToJsonElement(result.stdout).jsonObject["scenarios"]!!.jsonArray
+        assertEquals(2, scenarios.size)
+        for ((scenario, service) in scenarios.zip(listOf(4.0, 6.0))) {
+            val monitors = scenario.jsonObject["monitors"]!!.jsonArray.associateBy { it.jsonObject["monitor"]!!.jsonPrimitive.content }
+
+            fun mean(name: String) =
+                monitors
+                    .getValue(name)
+                    .jsonObject["mean"]!!
+                    .jsonPrimitive.content
+                    .toDouble()
+            assertEquals(service / 10, mean("Utilisation"), 1e-9)
+            assertEquals(service, mean("W"), 1e-9)
+            assertEquals(0.1, mean("Departures"), 1e-9)
+            assertEquals(2, scenario.jsonObject["runs"]!!.jsonArray.size)
+        }
+
+        val text = cpn().test("perf queue.cpnd -m queue-monitors.json -r 3 -t 1000")
+        assertEquals(0, text.statusCode, text.stderr)
+        assertTrue("Utilisation" in text.stdout && "95 % CI" in text.stdout, text.stdout)
+        val markdown = cpn().test("perf queue.cpnd -r 2 -t 100 --format markdown")
+        assertTrue("| Rate of Q'Depart 1 |" in markdown.stdout, "default monitors: ${markdown.stdout}")
+    }
+
+    @Test
+    fun perfRejectsBadMonitors() {
+        val bad = cpn().test("perf queue.cpnd -m bad-monitors.json -t 100")
+        assertEquals(1, bad.statusCode)
+        assertTrue("unknown type 'histogram'" in bad.stderr, bad.stderr)
+        val missing = cpn().test("perf queue.cpnd -m queue-monitors.json -t 10 --warmup 10")
+        assertEquals(1, missing.statusCode, "the warm-up must end before the run")
     }
 
     @Test

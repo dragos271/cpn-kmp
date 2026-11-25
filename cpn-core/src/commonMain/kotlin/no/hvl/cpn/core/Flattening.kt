@@ -75,7 +75,7 @@ private class Flattener(
         if (problems.isNotEmpty()) throw InvalidNetException(problems)
         for (page in net.primePages) instantiate(page, parent = null, substitution = null)
         val page = Page("flat", net.name, flatPlaces.toList(), flatTransitions.toList(), flatArcs.toList())
-        val flat = Net(net.name, listOf(page), net.variables, net.clock)
+        val flat = Net(net.name, listOf(page), net.variables, net.clock, net.seed)
         return FlatNet(flat, net, instances.toList(), placeMap, transitionMap)
     }
 

@@ -62,6 +62,7 @@ Cells marked **?** need the tool to be run. Gjesdal's editor is still private.
 | Timed nets | ✅ | ❌ | 🟡 `time` text field | ✅ | Integer time: availability, transition and arc delays, `time()`, clock shown in the app |
 | **Analysis** | | | | | |
 | State space | ✅ | ✅ | ❌ | ✅ | `cpn statespace`: full or partial, limits on nodes, arcs and time; timed nets too. Same sizes as CPN Tools on Garvik's 11 models |
+| Performance reports (monitors, replications, confidence intervals) | ✅ | ❌ | ❌ | ✅ | `cpn perf`, checked against queueing theory ([guide](performance-reports.md)) |
 | Standard state-space report | ✅ | 🟡 size only | ❌ | ✅ | `cpn statespace --report`: bounds, home, liveness, fairness ([examples](reports/)) |
 | **Files** | | | | | |
 | Reads `.cpn` | ✅ | 🟡 with F# inscriptions | ❌ (future work §7.3) | ✅ | 49/49 corpus models import, 35/49 run ([results](corpus-results.md)) |
@@ -137,9 +138,9 @@ code segments, priorities, inhibitor and reset arcs, and SML file I/O.
 ## Performance compared with Garvik
 
 See [performance.md](performance.md): his experiments repeated with both tools on the same machine.
-In short: his compiled F# simulates small models up to 1.9× faster, ours is faster on the largest
-two-phase commit and scales better with model size, and our state space exploration is up to
-several hundred times faster, because his is quadratic.
+In short (2026-11-25): ours simulates 1.7–3.4× faster than his compiled F#, and explores state
+spaces up to several hundred times faster, because his exploration is quadratic. On 2026-11-23 his
+was still faster on small models; profiling and caching pure inscriptions turned that around.
 
 ## Gjesdal's requirements applied to our tool
 

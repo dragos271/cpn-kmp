@@ -18,7 +18,8 @@ internal fun setValues(
     if (values.isEmpty()) return bytes
     var text = CharArray(bytes.size) { (bytes[it].toInt() and 0xff).toChar() }.concatToString()
     for ((name, value) in values) {
-        val declaration = Regex("""\bval\s+${Regex.escape(name)}\s*=\s*[^;]*;""")
+        // In a JSON document a line break is the two characters `\n`, so `val` may follow an `n`.
+        val declaration = Regex("""(?:(?<=\\[nrt])|(?<![\w']))val\s+${Regex.escape(name)}\s*=\s*[^;]*;""")
         // A .cpn file may keep a declaration twice, as text and in its <layout>: both are replaced.
         if (!declaration.containsMatchIn(text)) {
             throw CliktError("$file: --set $name: the model has no 'val $name = ...;' declaration", statusCode = 1)

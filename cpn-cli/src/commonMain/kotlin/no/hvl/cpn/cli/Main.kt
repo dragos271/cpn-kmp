@@ -18,7 +18,13 @@ class CpnCommand(
 ) : CliktCommand(name = "cpn") {
     init {
         versionOption(Cpn.VERSION, names = setOf("--version", "-V"))
-        subcommands(SimulateCommand(readFile), StateSpaceCommand(readFile), ConvertCommand(readFile, writeFile), BenchCommand(readFile))
+        subcommands(
+            SimulateCommand(readFile),
+            StateSpaceCommand(readFile),
+            ConvertCommand(readFile, writeFile),
+            BenchCommand(readFile),
+            PerfCommand(readFile, writeFile),
+        )
     }
 
     override val invokeWithoutSubcommand: Boolean = true

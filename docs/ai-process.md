@@ -188,3 +188,5 @@ This list is kept for the thesis's discussion of threats to validity.
 | Round-trip test (corpus) | Untouched exports changed 17 files: CPN Tools 1.5 ids (`id65`), creation-ordered instances, fusion elements that disagree with place labels | T3.1b |
 | CPN Tools state space sizes (Garvik's Appendix B) | A list variable on an arc from a place of its elements (`workers` on `Acknowledge`) was matched against one token, so the transition was never enabled. 35 corpus models ran and every test was green | 2026-11-11 |
 | Profiling while repeating Garvik's benchmark | Every identifier lookup rebuilt the name with `joinToString`: 40 % of simulation time on the dining philosophers. Correct, so no test could see it; only a measurement against another tool did | 2026-11-23 |
+| Designing F14 (reading the code) | Random functions in inscriptions always used seed 0, whatever `--seed` was: every run drew the same delays. Invisible to the golden-trace tests, which fix one seed | 2026-11-25 |
+| Using `--set` on a JSON document | `--set` missed declarations that follow a line break in a JSON file, where the break is the two characters `\n` | 2026-11-25 |

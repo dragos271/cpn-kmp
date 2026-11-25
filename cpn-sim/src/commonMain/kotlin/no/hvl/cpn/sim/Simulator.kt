@@ -57,6 +57,11 @@ public class Simulator(
     public val bindingSearch: BindingSearch = BindingSearch(semantics, maxEnumeration)
 
     private var random = SplitMix64(seed)
+
+    init {
+        flatNet.net.seed?.invoke(seed)
+    }
+
     private val history = mutableListOf<Occurrence>()
     private var steps = 0
 
@@ -154,6 +159,7 @@ public class Simulator(
     public fun reset() {
         marking = semantics.initialMarking
         random = SplitMix64(seed)
+        flatNet.net.seed?.invoke(seed)
         history.clear()
         steps = 0
     }

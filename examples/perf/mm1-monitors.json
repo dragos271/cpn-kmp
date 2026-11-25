@@ -1,0 +1,30 @@
+{
+ "monitors": [
+  {
+   "name": "Customers in system (L)",
+   "type": "marking-size",
+   "places": [
+    "Queue",
+    "Busy"
+   ]
+  },
+  {
+   "name": "Server utilisation",
+   "type": "marking-size",
+   "places": [
+    "Busy"
+   ]
+  },
+  {
+   "name": "Throughput (departures per time unit)",
+   "type": "occurrences",
+   "transition": "Depart"
+  },
+  {
+   "name": "Time in system (W)",
+   "type": "observe",
+   "transition": "Depart",
+   "expression": "intTime() - c"
+  }
+ ]
+}

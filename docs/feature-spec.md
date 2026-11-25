@@ -10,7 +10,8 @@ The reasons behind the features are in [vision.md](vision.md), and the order of 
 [TASKS.md](../TASKS.md). Work produced by the AI is accepted against these DoDs, as described in
 [ai-process.md](ai-process.md).
 
-Status values: **done**, **partial**, **not started**.
+Status values: **done**, **partial**, **not started**. Every point from the supervisor meetings is
+tracked in [supervisor-notes.md](supervisor-notes.md).
 
 ## Definition of done for every feature
 
@@ -305,7 +306,13 @@ is a later step.
 - Replications are reproducible from the seed on every platform.
 - The pathology model (F15) produces a report with turnaround time per specimen type.
 
-**Status: not started.** `cpn bench` and `--set` (2026-11-23) are the first pieces.
+**Status: partial** (2026-11-25). Done: monitors (marking size, occurrences, observations with a
+CPN ML expression), replications with Student's t confidence intervals, warm-up, scenario sweeps
+with `--set`, text/Markdown/JSON output: `cpn perf` ([performance-reports.md](performance-reports.md)).
+Checked: the M/M/1 queue's utilisation, L, W and throughput lie in their 95 % intervals, and a
+deterministic queue gives exact values (`PerformanceTest`); replications repeat exactly from their
+seed on JVM, JS and Wasm. Remaining: the pathology lab report (F15), monitors in the app, importing
+CPN Tools' own monitors.
 
 ## F15 Real-world case: pathology lab
 
@@ -322,8 +329,8 @@ performance report (F14): turnaround time, queue lengths, utilisation, and what-
 - The lab confirms that the process structure is right (validation by a domain expert).
 - At least two what-if scenarios are compared in a report.
 
-**Status: not started.** Needs: which lab, access to (anonymised) timing data, and whether an
-ethics or data-protection approval is needed.
+**Status: not started.** Data access and ethics are cleared: the supervisor works with the lab
+(2026-11-25). Still needed: the process description and the timing data from the lab.
 
 ---
 
@@ -347,8 +354,6 @@ ethics or data-protection approval is needed.
   running them.
 - **Python external functions (F13):** annotation in an SML comment (the file still opens in CPN
   Tools) or a new `extern` declaration? And is F9 (a Python-like syntax for inscriptions) dropped?
-- **Pathology lab (F15):** which lab, what data can be used, and is an ethics or data-protection
-  approval needed?
 - **Earlier tools:** we need access to Gjesdal's editor (`smartoceanplatform/cpn-editor`, private)
   to run it and complete [comparison.md](comparison.md). Garvik's F# simulator was received and
   run on 2026-11-23 ([performance.md](performance.md)).

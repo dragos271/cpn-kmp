@@ -233,7 +233,7 @@ The goal is to run real CPN Tools models and produce state-space reports.
 - **T4.1 Reference harness.** Scripts that run each corpus model in CPN Tools (via Access/CPN) and dump enabled bindings, markings after N fixed-choice steps, and state-space size → golden JSON (D6).
 - **T4.2 Differential tests (RQ1, RQ2).** Compare our output against the golden JSON per model: enabled bindings, markings, number of state-space nodes/arcs, and report values.
 - **T4.3 Compatibility study (RQ2).** The % of the corpus that runs unchanged. Target ≥ 80%. Categorise the failures.
-- **T4.4 Benchmarks (RQ3).** Simulation steps/s and state-space time/memory, on JVM vs native vs JS and against CPN Tools. Use kotlinx-benchmark.
+- **T4.4 Benchmarks (RQ3).** Simulation steps/s and state-space time/memory, on JVM vs native vs JS and against CPN Tools. *Partly done (T5.1): JVM against Garvik's tool; native, JS and CPN Tools remain.*
 - **T4.5 Cross-platform CI report (RQ1).** The same suite green on JVM, native and JS × Linux, macOS and Windows.
 - **T4.6 Syntax user study (RQ2).** Task material in both syntaxes, protocol, measurement of errors and time (needs ethics/consent per HVL rules).
 - **T4.7 Write-up.** Architecture lessons, results and threats to validity.
@@ -263,25 +263,24 @@ Runs alongside the iterations. The engine stays headless; the app only uses `cpn
 - **A7 State-space view.** After T3.4: the standard report and an explorable state graph.
 - **A8 Distribution.** Desktop installers (dmg / msi / deb) and the web build published from CI (e.g. GitHub Pages).
 
-## Supervisor meeting 2026-11-09
+## Supervisor feedback
 
-The meeting notes and where each point is handled:
+Every point from the supervisor meetings (2026-11-09 and 2026-11-23) is tracked in
+[docs/supervisor-notes.md](docs/supervisor-notes.md), with its status. Check it before starting a task.
 
-| Point | Where | Status |
-|---|---|---|
-| Run the earlier tool and compare features (supported / not supported) | [comparison.md](docs/comparison.md) | Matrix done from the theses. Running them needs access: Gjesdal's editor repo is private and Garvik's F# simulator is not public |
-| Stable under repeated import/export (important) | T3.1c, F6 | Done: unchanged `.cpn` files come back byte for byte (49/49); 500 random nets and 5-cycle fixed point in CI |
-| Import existing `.cpn` files from the web | T3.5 corpus, T3.1 | Done: 49/49 import, 35/49 run ([results](docs/corpus-results.md)) |
-| Make `.cpn` files from scratch and run them in another CPN tool | T3.1b, F5 | Export done, 5 models in `interop/`; **opening them in CPN Tools is still to do** ([log](docs/interop-log.md)) |
-| Timed nets: token availability, delays, integer time | T3.2, F7 | Done; comparison with CPN Tools traces waits for T4.1 |
-| The report at the end of the earlier work (state-space report) | T3.3, T3.4, F8 | Done: `cpn statespace --report`; examples in [docs/reports/](docs/reports/) |
-| Document the process, how prompts were used, how AI work is checked, when it is accepted | [ai-process.md](docs/ai-process.md) | Done; kept up to date per task |
-| Play with the green tests | `scripts/mutation-check.py`, ai-process.md §3 | Done: 6 deliberate bugs, 2 survived, tests added |
-| State space analysis | T3.3, T3.4, A7 | Done in the CLI and library (T3.3, T3.4); the view in the app is A7 |
-| Spec-driven development: vision.md, feature-spec.md (DoD, scope) | [vision.md](docs/vision.md), [feature-spec.md](docs/feature-spec.md) | Done |
+## Iteration I5 — Performance and the pathology lab (supervisor meeting 2026-11-23)
 
-Order from here: **T3.5** (start the corpus) → **T3.1** import → **T3.1b** export → **T3.1c** round trip →
-**T3.2** timed → **T3.3/T3.4** state space and report → A7. T2.6–T2.9 (Python-like syntax) follow after.
+- **T5.1 Repeat Garvik's performance study.** His tool and ours on the same machine
+  ([performance.md](docs/performance.md)); `cpn bench`, `--set`. *Done 2026-11-23.*
+- **T5.2 Faster simulation.** Identifier text computed once; pure arc expressions and guards cached on
+  their variables' values. *Done 2026-11-25:* 1.7–3.4× faster than Garvik's compiled F#.
+- **T5.3 Performance reports (F14).** Monitors, replications, confidence intervals, scenario sweeps:
+  `cpn perf` ([guide](docs/performance-reports.md)); random functions follow the simulation seed.
+  *Done 2026-11-25* for the CLI; monitors in the app and CPN Tools' own monitors remain.
+- **T5.4 Python external functions (F13).** Needs the supervisor's choice: annotation in an SML
+  comment or an `extern` declaration.
+- **T5.5 Pathology lab model (F15).** Needs the lab's process description and timing data.
+- **T5.6 Thesis template and DAT300 material.** Waiting for the student to send them.
 
 ---
 

@@ -43,6 +43,7 @@ cpn-cli/build/install/cpn-jvm/bin/cpn statespace corpus/cpnbook/models/chapter7/
 cpn-cli/build/install/cpn-jvm/bin/cpn statespace corpus/cpnbook/models/chapter7/7-2LimitProtocol.cpn --report   # standard report
 cpn-cli/build/install/cpn-jvm/bin/cpn statespace reference/garvik-2022/two-phase-commit.cpnd --set W=4   # change a declared value: 2323 nodes
 cpn-cli/build/install/cpn-jvm/bin/cpn bench reference/garvik-2022/two-phase-commit.cpnd -n 500000,1000000 --state-space   # timings
+cpn-cli/build/install/cpn-jvm/bin/cpn perf examples/perf/mm1.cpnd -m examples/perf/mm1-monitors.json -r 20 -t 100000 --warmup 5000   # performance report
 ```
 
 ### The app (desktop and web)

@@ -130,6 +130,12 @@ public class Net(
      * Inscriptions written in Kotlin do not need it.
      */
     public val clock: ((Long) -> Unit)? = null,
+    /**
+     * Told the simulation seed when a simulation starts, so random functions in inscriptions (CPN ML
+     * `discrete`, `exponential`, `CS.ran()`) give the same values for the same seed, and different
+     * values for different seeds.
+     */
+    public val seed: ((Long) -> Unit)? = null,
 ) {
     /** True if some place is timed: then the simulator keeps a clock and timestamps (T3.2). */
     public val isTimed: Boolean get() = pages.any { page -> page.places.any { it.timed } }
